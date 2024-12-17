@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'navigate_panel.dart';
 import 'app_bar.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AlbumPage extends StatefulWidget {
 	const AlbumPage({ super.key });
@@ -21,6 +22,14 @@ class AlbumPageState extends State<AlbumPage> {
 
 	static String crntDir = "/storage/emulated/0/Music/Songs";
 	static List<FileInfo> files = [];
+
+	@override
+  void initState() {
+    super.initState();
+		askPermission().then((ok) {
+			if (ok) refreshFiles();
+		});
+  }
 	
   static Future<void> refreshFiles() async {
 		Directory directory = Directory(crntDir);
@@ -42,6 +51,14 @@ class AlbumPageState extends State<AlbumPage> {
 		});
   }
 
+	// only return true if permission is not granted before and accepted upon request.
+	Future<bool> askPermission() async {
+		var status = await Permission.audio.status;
+		if (status.isGranted) return false;
+		status = await Permission.audio.request();
+		return status.isGranted;
+	}
+
   @override
   Widget build(BuildContext context) {
 		List<Widget> list = [];
@@ -55,7 +72,11 @@ class AlbumPageState extends State<AlbumPage> {
 		list.add(SizedBox(height: 10.0));
     return Scaffold(
 			backgroundColor: Colors.grey[800],
-			appBar: CommonAppBar(onRefresh: () async { await refreshFiles(); setState((){}); }),
+			appBar: CommonAppBar(onRefresh: () async {
+				await askPermission();
+				await refreshFiles();
+				setState((){});
+			}),
 			body: Column(
 				children: [
 					Expanded(
