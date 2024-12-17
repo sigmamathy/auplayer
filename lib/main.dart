@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:audio_service/audio_service.dart';
 import 'album.dart';
 import 'queue.dart';
 
-void main() async
-{
+void main() async {
+
+	// setup audio serivce.
+	QueuePageState.handler = await AudioService.init(
+    builder: () => AudioPlayerHandler(),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId: 'com.example.auplayer.channel.audio',
+      androidNotificationChannelName: 'Audio playback',
+      androidNotificationOngoing: true,
+    ),
+  );
+
+	// load files from main storage.
 	await AlbumPageState.refreshFiles();	
+
+	// run app!
   runApp(
 		MaterialApp(
 			debugShowCheckedModeBanner: false,
