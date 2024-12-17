@@ -9,10 +9,15 @@ void main() async
 		MaterialApp(
 			debugShowCheckedModeBanner: false,
 			initialRoute: '/album',
-			routes: {
-				'/album': (ctx) => AlbumPage(),
-				'/queue': (ctx) => QueuePage(),
-			}
+			onGenerateRoute: (settings) {
+				switch (settings.name) {
+					case '/album':
+						return PageRouteBuilder(pageBuilder: (_, __, ___) => AlbumPage());
+					case '/queue':
+						return PageRouteBuilder(pageBuilder: (_, __, ___) => QueuePage());
+				}
+				return null;
+			},
 		)
 	);
 }

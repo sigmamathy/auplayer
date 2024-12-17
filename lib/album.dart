@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'navigate_panel.dart';
 import 'app_bar.dart';
+import 'queue.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class AlbumPage extends StatefulWidget {
@@ -12,10 +13,11 @@ class AlbumPage extends StatefulWidget {
 
 class FileInfo {
 
+	String path;
 	String filename;
 	bool isDir;
 	
-	FileInfo(this.filename, this.isDir);
+	FileInfo(this.path, this.filename, this.isDir);
 }
 
 class AlbumPageState extends State<AlbumPage> {
@@ -35,14 +37,16 @@ class AlbumPageState extends State<AlbumPage> {
 		Directory directory = Directory(crntDir);
 		Stream<FileSystemEntity> fileStream = directory.list();
 		files.clear(); // Clear the existing files list
-		if (crntDir != '/storage/emulated/0') files.add(FileInfo("..", true));
+		if (crntDir != '/storage/emulated/0') {
+			files.add(FileInfo(crntDir.substring(0, crntDir.lastIndexOf('/')), "..", true));
+		}
 		await for (FileSystemEntity entity in fileStream) {
 			switch (extension(entity.path)) {
 				case "":
 				case ".mp3":
 				case ".m4a":
 				case ".wav":
-					files.add(FileInfo(basename(entity.path), entity is Directory));
+					files.add(FileInfo(entity.path, basename(entity.path), entity is Directory));
 			}
 		}
 		files.sort((a, b) {
@@ -64,7 +68,7 @@ class AlbumPageState extends State<AlbumPage> {
 		List<Widget> list = [];
 		for (FileInfo fi in files) {
 			list.add(_FileInfoCard(fi, () async {
-				crntDir = fi.filename == '..' ? crntDir.substring(0, crntDir.lastIndexOf('/')) : '$crntDir/${fi.filename}';
+				crntDir = fi.path;
 				await refreshFiles();
 				setState((){});
 			}));
@@ -121,7 +125,13 @@ class _FileInfoCard extends StatelessWidget {
 								overflow: TextOverflow.ellipsis,
 							)
 						),
-						IconButton(icon: Icon(Icons.add, color: Colors.white), onPressed: (){})
+						IconButton(
+							icon: Icon(Icons.add, color: Colors.white),
+							onPressed: () {
+								QueuePageState.addAudio(fi.path);
+								print('${QueuePageState.musicQueue}');
+							}
+						)
 					]
 				),
 			)

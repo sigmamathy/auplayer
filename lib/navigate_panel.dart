@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'queue.dart';
 
 class NavigatePanel extends StatelessWidget {
 

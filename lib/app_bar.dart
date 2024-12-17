@@ -6,7 +6,7 @@ class CommonAppBar extends AppBar {
 		: super(
 				title: Row(
 				children: [
-					Text("My App", style: TextStyle(color: Colors.white)),
+					Text("auplayer", style: TextStyle(color: Colors.white)),
 					Expanded(child: SizedBox()),
 					IconButton(
 						icon: Icon(Icons.refresh, color: Colors.white),
