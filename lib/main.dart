@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import 'album.dart';
 import 'queue.dart';
+import 'audio_player_handler.dart';
 
 void main() async {
 
 	// setup audio serivce.
-	QueuePageState.handler = await AudioService.init(
+	AudioPlayerHandler.instance = await AudioService.init(
     builder: () => AudioPlayerHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.example.auplayer.channel.audio',

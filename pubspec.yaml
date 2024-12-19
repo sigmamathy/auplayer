@@ -37,6 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   just_audio: ^0.9.42
   audio_service: ^0.18.16
+  rxdart: ^0.28.0
 
 dev_dependencies:
   flutter_test:

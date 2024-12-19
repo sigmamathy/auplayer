@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
-import 'package:rxdart/rxdart.dart';
 import 'app_bar.dart';
 import 'navigate_panel.dart';
+import 'audio_player_handler.dart';
 
 class QueuePage extends StatefulWidget {
 	const QueuePage({ super.key });
@@ -12,34 +11,105 @@ class QueuePage extends StatefulWidget {
 
 class QueuePageState extends State<QueuePage> {
 
-	static late AudioPlayerHandler handler;
-
-	static List<String> musicQueue = [];
-	static int crntPos = 0;
-
-	static Future<void> addAudio(String path) async {
-		musicQueue.add(path);
-		if (musicQueue.length - 1 == crntPos) {
-			await handler.loadAudioCrntPos();
-		}
+	Widget _mediaTitle() {
+		return StreamBuilder<MediaItem?>(
+			stream: AudioPlayerHandler.instance.mediaItem,
+      builder: (context, snapshot) {
+        String title = snapshot.data?.title ?? "No Song In Queue";
+        return Text(
+					title,
+					style: TextStyle(
+						color: Colors.white,
+						fontSize: 16.0,
+						fontWeight: FontWeight.bold,
+					)
+				);
+      }
+		);
 	}
 
 	Widget _mediaControlBar() {
     return StreamBuilder<bool>(
-      stream: handler.playbackState.map((state) => state.playing), 
+      stream: AudioPlayerHandler.instance.playbackState.map((state) => state.playing), 
       builder: (context, snapshot) {
         bool isPlaying = snapshot.data ?? false;
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+						IconButton(
+							onPressed: AudioPlayerHandler.instance.skipToPrevious,
+							icon: Icon(Icons.skip_previous, color: Colors.white)
+						),
             IconButton(
-              onPressed: isPlaying ? handler.pause : handler.play, 
+              onPressed: isPlaying ? AudioPlayerHandler.instance.pause : AudioPlayerHandler.instance.play, 
               icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white),
+							iconSize: 36.0,
             ),
+						IconButton(
+							onPressed: AudioPlayerHandler.instance.skipToNext,
+							icon: Icon(Icons.skip_next, color: Colors.white)
+						),
           ],
         );
       }
     );
+	}
+
+	Widget _mediaProgressBar() {
+    return StreamBuilder<MediaState>(
+      stream: mediaStateStream,
+      builder: (context, snapshot) {
+        final mediaState = snapshot.data;
+        Duration dur = mediaState?.mediaItem?.duration ?? Duration.zero;
+        Duration pos = mediaState?.position ?? Duration.zero;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+						Text(durationToTime(pos), style: TextStyle(color: Colors.white)),
+            Expanded(
+							child: Slider(
+								min: 0,
+								max: dur.inSeconds.toDouble(),
+								value: pos.inSeconds.toDouble(), 
+								thumbColor: Colors.deepPurple[400],
+								activeColor: Colors.deepPurple[400],
+								inactiveColor: Colors.grey,
+								onChanged: (newValue) {
+									AudioPlayerHandler.instance.seek(Duration(seconds: newValue.toInt()));
+								}
+							)
+						),
+						Text(durationToTime(dur), style: TextStyle(color: Colors.white)),
+          ],
+        );
+      },
+    );
+  }
+
+	Widget _queueList() {
+		return StreamBuilder(
+			stream: AudioPlayerHandler.instance.queue, 
+			builder: (context, snapshot) {
+				final queue = snapshot.data ?? [];
+
+				return Expanded(
+					child: SingleChildScrollView(
+						child: Column(
+							children: [...queue.asMap().entries.map((entry) => 
+								Card(
+									color: Colors.black,
+									child: ListTile(
+										leading: Text((entry.key+1).toString(), style: TextStyle(color: Colors.white)),
+										title: Text(entry.value.title, style: TextStyle(color: Colors.white)),
+										trailing: IconButton(icon: Icon(Icons.delete), color: Colors.white, onPressed: (){}),
+									)),
+								)
+							],
+						)
+					)
+				);
+			}
+		);
 	}
 
 	@override
@@ -49,86 +119,57 @@ class QueuePageState extends State<QueuePage> {
 			appBar: CommonAppBar(onRefresh: (){}),
 			body: Column(
 				children: [
+					Card(
+						margin: EdgeInsets.all(10.0),
+						color: Colors.grey[850],
+						child: Padding(
+							padding: EdgeInsets.all(10.0),
+							child: Column(
+								children: [
+									_mediaTitle(),
+									SizedBox(height: 10.0),
+									_mediaProgressBar(),
+									_mediaControlBar(),
+								]
+							)
+						)
+					),
 					Expanded(
-						child: _mediaControlBar()
+						child: Card(
+							margin: EdgeInsets.fromLTRB(10, 0, 10, 10),
+							color: Colors.grey[850],
+							child: Padding(
+							padding: EdgeInsets.all(10),
+								child: Column(
+									children: [
+										Text(
+											"Music Queue",
+											style: TextStyle(
+												fontSize: 16.0,
+												fontWeight: FontWeight.bold,
+												color: Colors.white
+											)
+										),
+										Divider(color: Colors.grey[800], height: 20.0),
+										_queueList()
+									]
+								)
+							)
+						)
 					),
 					NavigatePanel(1)
 				]
 			),
 		);
   }
-}
 
-class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
+	String durationToTime(Duration duration) {
+		String ng = duration.isNegative ? '-' : '';
 
-	final _player = AudioPlayer(); // e.g. just_audio
-
-	AudioPlayerHandler() {
-		_player.playbackEventStream.map(_transformEvent).pipe(playbackState);
-		playbackState.listen((PlaybackState state) async {
-			if (state.processingState == AudioProcessingState.completed) {
-				int x = ++QueuePageState.crntPos;
-				if (x < QueuePageState.musicQueue.length) {
-					await loadAudioCrntPos();
-					play();
-				} else {
-					// TODO: set state
-				}
-			}
-		});
+		String td(int n) => n.toString().padLeft(2, "0");
+		String tdm = td(duration.inMinutes.remainder(60).abs());
+		String tds = td(duration.inSeconds.remainder(60).abs());
+		return "$ng${duration.inHours > 0 ? "${td(duration.inHours)}:" : ""}$tdm:$tds";
 	}
-
-	Future<void> loadAudioCrntPos() async {
-    await _player.setFilePath(QueuePageState.musicQueue[QueuePageState.crntPos]);
-	}
-
-	PlaybackState _transformEvent(PlaybackEvent event) {
-    return PlaybackState(
-      controls: [
-        MediaControl.rewind,
-        if (_player.playing) MediaControl.pause else MediaControl.play,
-        MediaControl.stop,
-        MediaControl.fastForward,
-      ],
-      systemActions: const {
-        MediaAction.seek,
-        MediaAction.seekForward,
-        MediaAction.seekBackward,
-      },
-      androidCompactActionIndices: const [0, 1, 3],
-      processingState: const {
-        ProcessingState.idle: AudioProcessingState.idle,
-        ProcessingState.loading: AudioProcessingState.loading,
-        ProcessingState.buffering: AudioProcessingState.buffering,
-        ProcessingState.ready: AudioProcessingState.ready,
-        ProcessingState.completed: AudioProcessingState.completed,
-      }[_player.processingState]!,
-      playing: _player.playing,
-      updatePosition: _player.position,
-      bufferedPosition: _player.bufferedPosition,
-      speed: _player.speed,
-      queueIndex: event.currentIndex,
-    );
-  }
-  
-  // The most common callbacks:
-  @override Future<void> play() => _player.play();
-  @override Future<void> pause() => _player.pause();
-  @override Future<void> stop() => _player.stop();
-  @override Future<void> seek(Duration position) => _player.seek(position);
-  @override Future<void> skipToQueueItem(int index) => _player.seek(Duration.zero, index: index);
 }
 
-Stream<MediaState> get mediaStateStream =>
-  Rx.combineLatest2<MediaItem?, Duration, MediaState>(
-    QueuePageState.handler.mediaItem,
-    AudioService.position,
-    (mediaItem, position) => MediaState(mediaItem, position)
-  );
-
-class MediaState {
-  final MediaItem? mediaItem;
-  final Duration position;
-
-  MediaState(this.mediaItem, this.position);
-}

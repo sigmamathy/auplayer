@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import 'navigate_panel.dart';
 import 'app_bar.dart';
 import 'queue.dart';
+import 'audio_player_handler.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class AlbumPage extends StatefulWidget {
@@ -128,8 +129,7 @@ class _FileInfoCard extends StatelessWidget {
 						IconButton(
 							icon: Icon(Icons.add, color: Colors.white),
 							onPressed: () {
-								QueuePageState.addAudio(fi.path);
-								print('${QueuePageState.musicQueue}');
+								AudioPlayerHandler.instance.addSongToQueue(fi);
 							}
 						)
 					]
