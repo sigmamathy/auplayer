@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'queue.dart';
 
 class NavigatePanel extends StatelessWidget {
 
@@ -11,7 +10,7 @@ class NavigatePanel extends StatelessWidget {
   Widget build(BuildContext context) {
 		return Container(
 			height: 70,
-			color: Colors.blueGrey[700],
+			color: Color.fromARGB(255, 63, 43, 92),
 			child: Row(
 				mainAxisAlignment: MainAxisAlignment.spaceEvenly,
 				children: [

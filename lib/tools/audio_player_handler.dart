@@ -1,13 +1,15 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:rxdart/rxdart.dart';
-import 'album.dart';
+import 'package:auplayer/tools/file_manager.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
+	// Singleton instance.
 	static late AudioPlayerHandler instance;
-	final player = AudioPlayer(); 
-	final playlist = ConcatenatingAudioSource(children: []);
+
+	final player		= AudioPlayer(); 
+	final playlist	= ConcatenatingAudioSource(children: []);
 
 	AudioPlayerHandler() {
 		player.setAudioSource(playlist);
@@ -33,7 +35,6 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       controls: [
         MediaControl.skipToPrevious,
         if (player.playing) MediaControl.pause else MediaControl.play,
-        MediaControl.stop,
         MediaControl.skipToNext,
       ],
       systemActions: const {
@@ -41,7 +42,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
         MediaAction.seekForward,
         MediaAction.seekBackward,
       },
-      androidCompactActionIndices: const [0, 1, 3],
+      androidCompactActionIndices: const [0, 1, 2],
       processingState: const {
         ProcessingState.idle: AudioProcessingState.idle,
         ProcessingState.loading: AudioProcessingState.loading,
@@ -57,20 +58,18 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     );
   }
 
-  MediaItem toMediaItem(FileInfo fi) {
-    return MediaItem(
-      id: fi.path, 
-      title: fi.filename,
-    );
-  }
-
-  Future<void> addSongToQueue(FileInfo fi) async {
+  Future<void> addMusic(FileInfo fi) async {
     final UriAudioSource source = AudioSource.file(fi.path);
     playlist.add(source);
-
-    queue.value.add(toMediaItem(fi));
+    queue.value.add(MediaItem(id: fi.path, title: fi.name));
     queue.add(queue.value);
   }
+
+	Future<void> removeMusicAt(int index) async {
+		playlist.removeAt(index);
+		final newQueue = queue.value..removeAt(index);
+		queue.add(newQueue);
+	}
   
   // The most common callbacks:
   @override Future<void> play() => player.play();

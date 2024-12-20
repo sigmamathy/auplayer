@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
-import 'app_bar.dart';
-import 'navigate_panel.dart';
-import 'audio_player_handler.dart';
+import 'package:auplayer/navigate_panel.dart';
+import 'package:auplayer/tools/audio_player_handler.dart';
 
 class QueuePage extends StatefulWidget {
 	const QueuePage({ super.key });
@@ -89,24 +88,27 @@ class QueuePageState extends State<QueuePage> {
 	Widget _queueList() {
 		return StreamBuilder(
 			stream: AudioPlayerHandler.instance.queue, 
-			builder: (context, snapshot) {
-				final queue = snapshot.data ?? [];
-
-				return Expanded(
-					child: SingleChildScrollView(
-						child: Column(
-							children: [...queue.asMap().entries.map((entry) => 
-								Card(
-									color: Colors.black,
-									child: ListTile(
-										leading: Text((entry.key+1).toString(), style: TextStyle(color: Colors.white)),
-										title: Text(entry.value.title, style: TextStyle(color: Colors.white)),
-										trailing: IconButton(icon: Icon(Icons.delete), color: Colors.white, onPressed: (){}),
-									)),
-								)
-							],
-						)
-					)
+			builder: (_, s1) {
+				final queue = s1.data ?? [];
+				return StreamBuilder(
+					stream: AudioPlayerHandler.instance.player.currentIndexStream,
+					builder: (_, s2) {
+						int crntIndex = s2.data ?? -1;
+						return Expanded(
+							child: ListView(
+								children: [...queue.asMap().entries.map((entry) => 
+									Card(
+										color: Colors.black,
+										child: ListTile(
+											leading: Text((entry.key+1).toString(), style: TextStyle(color: Colors.white)),
+											title: Text(entry.value.title, style: TextStyle(color: crntIndex == entry.key ? Colors.cyan : Colors.white)),
+											trailing: IconButton(icon: Icon(Icons.delete), color: Colors.white, onPressed: (){}),
+										)),
+									)
+								],
+							)
+						);
+					}
 				);
 			}
 		);
@@ -116,7 +118,19 @@ class QueuePageState extends State<QueuePage> {
   Widget build(BuildContext context) {
     return Scaffold(
 			backgroundColor: Colors.grey[800],
-			appBar: CommonAppBar(onRefresh: (){}),
+			appBar: AppBar(
+				title: Row(
+					children: [
+						Text("auplayer", style: TextStyle(color: Colors.white)),
+						Expanded(child: SizedBox()),
+						IconButton(
+							icon: Icon(Icons.refresh, color: Colors.white),
+							onPressed: () {}
+						),
+					]
+				),
+				backgroundColor: Colors.deepPurple[700],
+			),
 			body: Column(
 				children: [
 					Card(

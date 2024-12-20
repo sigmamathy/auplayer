@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
-import 'album.dart';
-import 'queue.dart';
-import 'audio_player_handler.dart';
+import 'package:auplayer/pages/album.dart';
+import 'package:auplayer/pages/queue.dart';
+import 'package:auplayer/tools/audio_player_handler.dart';
+import 'package:auplayer/tools/file_manager.dart';
 
 void main() async {
 
@@ -16,8 +17,7 @@ void main() async {
     ),
   );
 
-	// load files from main storage.
-	await AlbumPageState.refreshFiles();	
+	FileManager.instance = FileManager();
 
 	// run app!
   runApp(
@@ -36,3 +36,4 @@ void main() async {
 		)
 	);
 }
+
