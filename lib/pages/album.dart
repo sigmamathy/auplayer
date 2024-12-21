@@ -49,6 +49,17 @@ class AlbumPageState extends State<AlbumPage> {
 							)
 						),
 						Expanded(child: SizedBox()),
+						IconButton(
+							icon: Icon(
+								AlbumReadMode.crntMode == AlbumReadMode.FOLDER_VIEW ? Icons.perm_media : Icons.bookmarks,
+								color: Colors.white
+							),
+							onPressed: () {
+								
+								AlbumReadMode.crntMode = AlbumReadMode.crntMode == AlbumReadMode.FOLDER_VIEW ? AlbumReadMode.LABEL_VIEW : AlbumReadMode.FOLDER_VIEW;
+								setState((){});
+							},
+						),
 						PopupMenuButton<int>(
 							onSelected: (int value) async {
 								if (value == 0) {

@@ -14,6 +14,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 	AudioPlayerHandler() {
 		player.setAudioSource(playlist);
 		_listenForDurationChanges();
+		_listenForPlaylistEnd();
 		player.playbackEventStream.map(_transformEvent).pipe(playbackState);
 	}
 
@@ -29,6 +30,14 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       mediaItem.add(newMediaItem);
     });
   }
+
+	void _listenForPlaylistEnd() {
+		player.playbackEventStream.listen((e) {
+			if (e.processingState == ProcessingState.completed && isAtLastMusic()) {
+				pause();
+			}
+		});
+	}
 
 	PlaybackState _transformEvent(PlaybackEvent event) {
     return PlaybackState(
@@ -69,6 +78,10 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		playlist.removeAt(index);
 		final newQueue = queue.value..removeAt(index);
 		queue.add(newQueue);
+		if (playlist.length == 0) {
+			stop();
+			mediaItem.add(null);
+		}
 	}
   
   // The most common callbacks:
@@ -77,6 +90,13 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   @override Future<void> stop() => player.stop();
   @override Future<void> seek(Duration position) => player.seek(position);
   @override Future<void> skipToQueueItem(int index) => player.seek(Duration.zero, index: index);
+
+	int crntIndex() => player.currentIndex ?? -1;
+
+	bool isAtLastMusic() {
+		if (player.currentIndex == null) return false;
+		return player.currentIndex! >= playlist.length - 1;
+	}
 }
 
 Stream<MediaState> get mediaStateStream =>

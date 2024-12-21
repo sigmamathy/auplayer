@@ -10,79 +10,9 @@ class QueuePage extends StatefulWidget {
 
 class QueuePageState extends State<QueuePage> {
 
-	Widget _mediaTitle() {
-		return StreamBuilder<MediaItem?>(
-			stream: AudioPlayerHandler.instance.mediaItem,
-      builder: (context, snapshot) {
-        String title = snapshot.data?.title ?? "No Song In Queue";
-        return Text(
-					title,
-					style: TextStyle(
-						color: Colors.white,
-						fontSize: 16.0,
-						fontWeight: FontWeight.bold,
-					)
-				);
-      }
-		);
-	}
-
-	Widget _mediaControlBar() {
-    return StreamBuilder<bool>(
-      stream: AudioPlayerHandler.instance.playbackState.map((state) => state.playing), 
-      builder: (context, snapshot) {
-        bool isPlaying = snapshot.data ?? false;
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-						IconButton(
-							onPressed: AudioPlayerHandler.instance.skipToPrevious,
-							icon: Icon(Icons.skip_previous, color: Colors.white)
-						),
-            IconButton(
-              onPressed: isPlaying ? AudioPlayerHandler.instance.pause : AudioPlayerHandler.instance.play, 
-              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white),
-							iconSize: 36.0,
-            ),
-						IconButton(
-							onPressed: AudioPlayerHandler.instance.skipToNext,
-							icon: Icon(Icons.skip_next, color: Colors.white)
-						),
-          ],
-        );
-      }
-    );
-	}
-
-	Widget _mediaProgressBar() {
-    return StreamBuilder<MediaState>(
-      stream: mediaStateStream,
-      builder: (context, snapshot) {
-        final mediaState = snapshot.data;
-        Duration dur = mediaState?.mediaItem?.duration ?? Duration.zero;
-        Duration pos = mediaState?.position ?? Duration.zero;
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-						Text(durationToTime(pos), style: TextStyle(color: Colors.white)),
-            Expanded(
-							child: Slider(
-								min: 0,
-								max: dur.inSeconds.toDouble(),
-								value: pos.inSeconds.toDouble(), 
-								thumbColor: Colors.deepPurple[400],
-								activeColor: Colors.deepPurple[400],
-								inactiveColor: Colors.grey,
-								onChanged: (newValue) {
-									AudioPlayerHandler.instance.seek(Duration(seconds: newValue.toInt()));
-								}
-							)
-						),
-						Text(durationToTime(dur), style: TextStyle(color: Colors.white)),
-          ],
-        );
-      },
-    );
+	@override
+  void initState() {
+    super.initState();
   }
 
 	Widget _queueList() {
@@ -93,18 +23,10 @@ class QueuePageState extends State<QueuePage> {
 				return StreamBuilder(
 					stream: AudioPlayerHandler.instance.player.currentIndexStream,
 					builder: (_, s2) {
-						int crntIndex = s2.data ?? -1;
 						return Expanded(
 							child: ListView(
-								children: [...queue.asMap().entries.map((entry) => 
-									Card(
-										color: Colors.black,
-										child: ListTile(
-											leading: Text((entry.key+1).toString(), style: TextStyle(color: Colors.white)),
-											title: Text(entry.value.title, style: TextStyle(color: crntIndex == entry.key ? Colors.cyan : Colors.white)),
-											trailing: IconButton(icon: Icon(Icons.delete), color: Colors.white, onPressed: (){}),
-										)),
-									)
+								children: [...queue.asMap().entries.map(
+									(entry) => _QueueMusicCard(entry.key, entry.value.title))
 								],
 							)
 						);
@@ -121,11 +43,35 @@ class QueuePageState extends State<QueuePage> {
 			appBar: AppBar(
 				title: Row(
 					children: [
-						Text("auplayer", style: TextStyle(color: Colors.white)),
+						Text("auplayer",
+							style: TextStyle(
+								color: Colors.white,
+								fontFamily: 'RougeScript', 
+								fontWeight: FontWeight.bold,
+								fontSize: 30.0
+							)
+						),
 						Expanded(child: SizedBox()),
-						IconButton(
-							icon: Icon(Icons.refresh, color: Colors.white),
-							onPressed: () {}
+						PopupMenuButton<int>(
+							onSelected: (int value) async {
+							},
+							itemBuilder: (BuildContext context) {
+								return <PopupMenuEntry<int>>[
+									PopupMenuItem<int>(
+										value: 0,
+										child: Text('Clear All'),
+									),
+									PopupMenuItem<int>(
+										value: 1,
+										child: Text('Set As Home'),
+									),
+									PopupMenuItem<int>(
+										value: 2,
+										child: Text('Option 3'),
+									),
+								];
+							},
+							child: Icon(Icons.more_vert, color: Colors.white),
 						),
 					]
 				),
@@ -133,21 +79,7 @@ class QueuePageState extends State<QueuePage> {
 			),
 			body: Column(
 				children: [
-					Card(
-						margin: EdgeInsets.all(10.0),
-						color: Colors.grey[850],
-						child: Padding(
-							padding: EdgeInsets.all(10.0),
-							child: Column(
-								children: [
-									_mediaTitle(),
-									SizedBox(height: 10.0),
-									_mediaProgressBar(),
-									_mediaControlBar(),
-								]
-							)
-						)
-					),
+					_MediaPlayerWidget(),
 					Expanded(
 						child: Card(
 							margin: EdgeInsets.fromLTRB(10, 0, 10, 10),
@@ -176,14 +108,167 @@ class QueuePageState extends State<QueuePage> {
 			),
 		);
   }
-
-	String durationToTime(Duration duration) {
-		String ng = duration.isNegative ? '-' : '';
-
-		String td(int n) => n.toString().padLeft(2, "0");
-		String tdm = td(duration.inMinutes.remainder(60).abs());
-		String tds = td(duration.inSeconds.remainder(60).abs());
-		return "$ng${duration.inHours > 0 ? "${td(duration.inHours)}:" : ""}$tdm:$tds";
-	}
 }
 
+class _MediaPlayerWidget extends StatelessWidget {
+
+	Widget _mediaTitle() {
+		return StreamBuilder<MediaItem?>(
+			stream: AudioPlayerHandler.instance.mediaItem,
+      builder: (_, snapshot) {
+        String title = snapshot.data?.title ?? "No Song In Queue";
+        return Text(
+					title,
+					style: TextStyle(
+						color: Colors.white,
+						fontSize: 16.0,
+						fontWeight: FontWeight.bold,
+					)
+				);
+      }
+		);
+	}
+
+	Widget _mediaProgressBar() {
+		final ah = AudioPlayerHandler.instance;
+    return StreamBuilder<MediaState>(
+      stream: mediaStateStream,
+      builder: (_, __) {
+				Duration dur = ah.player.duration ?? Duration.zero;	
+				Duration pos = ah.playlist.length > 0 ? ah.player.position : Duration.zero;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+						Text(_durationToTime(pos), style: TextStyle(color: Colors.white)),
+            Expanded(
+							child: Slider(
+								min: 0,
+								max: dur.inSeconds.toDouble(),
+								value: pos.inSeconds.toDouble(), 
+								thumbColor: Colors.deepPurple[400],
+								activeColor: Colors.deepPurple[400],
+								inactiveColor: Colors.grey,
+								onChanged: (newValue) {
+									ah.seek(Duration(seconds: newValue.toInt()));
+								}
+							)
+						),
+						Text(_durationToTime(dur), style: TextStyle(color: Colors.white)),
+          ],
+        );
+      },
+    );
+  }
+	
+	Widget _mediaControlBar() {
+		final ah = AudioPlayerHandler.instance;
+    return StreamBuilder<bool>(
+      stream: ah.playbackState.map((state) => state.playing), 
+      builder: (_, s) {
+
+        bool isPlaying = s.data ?? false;
+				bool hasMedia = ah.mediaItem.value != null;
+				bool canSkipPrev = hasMedia && (ah.player.currentIndex??-1) > 0;
+				bool canSkipNext = hasMedia && (ah.player.currentIndex??-1) < ah.playlist.length-1;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+						IconButton(
+							onPressed: canSkipPrev ? ah.skipToPrevious : (){},
+							icon: Icon(
+								Icons.skip_previous,
+								color: canSkipPrev ? Colors.white : Colors.grey
+							)
+						),
+            IconButton(
+              onPressed: hasMedia ? (isPlaying ? ah.pause : ah.play) : (){}, 
+              icon: Icon(
+								isPlaying ? Icons.pause : Icons.play_arrow,
+								color: hasMedia ? Colors.white : Colors.grey
+							),
+							iconSize: 36.0,
+            ),
+						IconButton(
+							onPressed: canSkipNext ? ah.skipToNext : (){},
+							icon: Icon(
+								Icons.skip_next,
+								color: canSkipNext ? Colors.white : Colors.grey
+							)
+						),
+          ],
+        );
+      }
+    );
+	}
+
+	@override
+  Widget build(BuildContext context) {
+		return Card(
+			margin: EdgeInsets.all(10.0),
+			color: Colors.grey[850],
+			child: Padding(
+				padding: EdgeInsets.all(10.0),
+				child: Column(
+					children: [
+						_mediaTitle(),
+						SizedBox(height: 10.0),
+						_mediaProgressBar(),
+						_mediaControlBar(),
+					]
+				)
+			)
+		);
+  }
+}
+
+class _QueueMusicCard extends StatelessWidget {
+
+	final int index;
+	final String name;
+
+	const _QueueMusicCard(this.index, this.name);
+
+	@override
+  Widget build(BuildContext context) {
+		final ah = AudioPlayerHandler.instance;
+    return GestureDetector(
+			onTap: () {
+				if (ah.crntIndex() != index) {
+					ah.skipToQueueItem(index);
+				}
+			},
+			child: Card(
+				color: Colors.black,
+				child: ListTile(
+					leading: Text(
+						(index+1).toString(),
+						style: TextStyle(color: Colors.white)
+					),
+					title: Text(
+						name,
+						style: TextStyle(
+							color: ah.crntIndex() == index ? Colors.cyan : Colors.white
+						)
+					),
+					trailing: IconButton(
+						icon: Icon(Icons.delete),
+						color: Colors.white,
+						onPressed: (){
+							ah.removeMusicAt(index);
+						}
+					),
+				)
+			),
+		);
+  }
+}
+
+String _durationToTime(Duration duration) {
+	String ng = duration.isNegative ? '-' : '';
+
+	String td(int n) => n.toString().padLeft(2, "0");
+	String tdm = td(duration.inMinutes.remainder(60).abs());
+	String tds = td(duration.inSeconds.remainder(60).abs());
+	return "$ng${duration.inHours > 0 ? "${td(duration.inHours)}:" : ""}$tdm:$tds";
+}
