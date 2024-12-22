@@ -18,7 +18,8 @@ void main() async {
     ),
   );
 
-	FileManager.instance = FileManager();
+	final ah = FileManager.instance = FileManager();
+	await ah.init();
 
 	// run app!
   runApp(

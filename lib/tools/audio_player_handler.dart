@@ -77,7 +77,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   }
 
 	Future<void> removeMusicAt(int index) async {
-		playlist.removeAt(index);
+		await playlist.removeAt(index);
 		final nq = queue.value..removeAt(index);
 		queue.add(nq);
 		if (playlist.length == 0) {
@@ -86,7 +86,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 	}
 
 	Future<void> removeAll() async {
-		playlist.clear();
+		await playlist.clear();
 		final nq = queue.value..clear();
 		queue.add(nq);
 		await pause();

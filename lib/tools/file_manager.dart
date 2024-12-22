@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class FileInfo {
@@ -13,8 +14,27 @@ class FileManager {
 
 	static late FileManager instance;
 
-	String crntDir = "/storage/emulated/0/Music";
+	late String homeDir;
+	late String crntDir;
 	List<FileInfo> fileList = [];
+
+	Future<void> init() async {
+		Directory dir = await getApplicationDocumentsDirectory();
+		File f = File('${dir.path}/config.txt');
+		if (await f.exists()) {
+			homeDir = await f.readAsString();
+		} else {
+			homeDir = '/storage/emulated/0';
+			setHomeDirectory(homeDir);
+		}
+		crntDir = homeDir;
+	}
+
+	Future<void> setHomeDirectory(String home) async {
+		Directory dir = await getApplicationDocumentsDirectory();
+		File f = File('${dir.path}/config.txt');
+		await f.writeAsString(home);
+	}
 	
 	Future<void> requestPermission() async {
 		var status = await Permission.audio.status;

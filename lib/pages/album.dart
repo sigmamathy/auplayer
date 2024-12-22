@@ -62,27 +62,52 @@ class AlbumPageState extends State<AlbumPage> {
 						),
 						PopupMenuButton<int>(
 							onSelected: (int value) async {
-								if (value == 0) {
-									await fm.refreshFileList();
-									setState((){});
+								switch (value) {
+									case 0:
+										await fm.refreshFileList();
+										setState(() {});
+										break;
+									case 1:
+										await fm.setHomeDirectory(fm.crntDir);
+										setState(() {});
+										break;
 								}
 							},
 							itemBuilder: (BuildContext context) {
 								return <PopupMenuEntry<int>>[
 									PopupMenuItem<int>(
 										value: 0,
-										child: Text('Refresh'),
+										child: Row(
+											children: [
+												Icon(Icons.refresh, color: Colors.white),
+												SizedBox(width: 6.0),
+												Text('Refresh', style: TextStyle(color: Colors.white)),
+											]
+										)
 									),
 									PopupMenuItem<int>(
 										value: 1,
-										child: Text('Set As Home'),
+										child: Row(
+											children: [
+												Icon(Icons.home, color: Colors.white),
+												SizedBox(width: 6.0),
+												Text('Set as Home', style: TextStyle(color: Colors.white)),
+											]
+										)
 									),
 									PopupMenuItem<int>(
 										value: 2,
-										child: Text('Option 3'),
+										child: Row(
+											children: [
+												Icon(Icons.help, color: Colors.white),
+												SizedBox(width: 6.0),
+												Text('Help', style: TextStyle(color: Colors.white)),
+											]
+										)
 									),
 								];
 							},
+							color: Colors.grey[800],
 							child: Icon(Icons.more_vert, color: Colors.white),
 						),
 					]

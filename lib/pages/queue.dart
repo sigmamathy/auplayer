@@ -39,18 +39,27 @@ class QueuePageState extends State<QueuePage> {
 								return <PopupMenuEntry<int>>[
 									PopupMenuItem<int>(
 										value: 0,
-										child: Text('Clear All'),
-									),
-									PopupMenuItem<int>(
-										value: 1,
-										child: Text('Set As Home'),
+										child: Row(
+											children: [
+												Icon(Icons.delete, color: Colors.white),
+												SizedBox(width: 6.0),
+												Text('Clear Queue', style: TextStyle(color: Colors.white)),
+											]
+										)
 									),
 									PopupMenuItem<int>(
 										value: 2,
-										child: Text('Option 3'),
+										child: Row(
+											children: [
+												Icon(Icons.help, color: Colors.white),
+												SizedBox(width: 6.0),
+												Text('Help', style: TextStyle(color: Colors.white)),
+											]
+										)
 									),
 								];
 							},
+							color: Colors.grey[800],
 							child: Icon(Icons.more_vert, color: Colors.white),
 						),
 					]
