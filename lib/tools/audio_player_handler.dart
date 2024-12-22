@@ -82,7 +82,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		final newQueue = queue.value..removeAt(index);
 		queue.add(newQueue);
 		if (playlist.length == 0) {
-			pause();
+			await pause();
 		}
 	}
 
@@ -90,19 +90,23 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		playlist.clear();
 		final nq = queue.value..clear();
 		queue.add(nq);
-		pause();
+		await pause();
 	}
 
 	Future<void> moveMusicAt(int from, int to) async {
+		if (to > from) to--;
 		int i = crntIndex();
 		Duration pos = player.position;
-		playlist.move(from, to);
+		await playlist.move(from, to);
 		final a = queue.value[from];
 		queue.value..remove(a)..insert(to, a);
 		queue.add(queue.value);
 		if (i == from) {
-			player.seek(pos, index: to);
+			await player.seek(pos, index: to);
 			mediaItem.add(queue.value[to]);
+		} else if (i == to) {
+			await player.seek(pos, index: from);
+			mediaItem.add(queue.value[from]);
 		}
 	}
   

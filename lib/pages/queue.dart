@@ -11,33 +11,27 @@ class QueuePage extends StatefulWidget {
 
 class QueuePageState extends State<QueuePage> {
 
-	@override
-  void initState() {
-    super.initState();
-  }
-
-	Widget proxyDecorator(
-        Widget child, int index, Animation<double> animation) {
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (BuildContext context, Widget? child) {
-          final double animValue = Curves.easeInOut.transform(animation.value);
-          final double elevation = lerpDouble(1, 6, animValue)!;
-          final double scale = lerpDouble(1, 1.02, animValue)!;
-          return Transform.scale(
-            scale: scale,
-            // Create a Card based on the color and the content of the dragged one
-            // and set its elevation to the animated value.
-            child: Card(
-              elevation: elevation,
-              color: Colors.black,
-							child: Text("hi"),
-            ),
-          );
-        },
-        child: child,
-      );
-    }
+	Widget proxyDecorator(Widget child, int index, Animation<double> animation) {
+		return AnimatedBuilder(
+			animation: animation,
+			builder: (BuildContext context, Widget? child) {
+				final double animValue = Curves.easeInOut.transform(animation.value);
+				final double elevation = lerpDouble(1, 6, animValue)!;
+				final double scale = lerpDouble(1, 1.02, animValue)!;
+				return Transform.scale(
+					scale: scale,
+					// Create a Card based on the color and the content of the dragged one
+					// and set its elevation to the animated value.
+					child: Card(
+						elevation: elevation,
+						color: Colors.black,
+						child: Text("hi"),
+					),
+				);
+			},
+			child: child,
+		);
+	}
 
 	Widget _queueList() {
 		final ah = AudioPlayerHandler.instance;
@@ -50,9 +44,9 @@ class QueuePageState extends State<QueuePage> {
 					builder: (_, s2) {
 						return Expanded(
 							child: ReorderableListView(
-								onReorder: (a, b) {
+								onReorder: (a, b) async {
 									if (a == b) return;
-									ah.moveMusicAt(a, b);
+									await ah.moveMusicAt(a, b);
 								},
 								proxyDecorator: proxyDecorator,
 								children: [...queue.asMap().entries.map(
