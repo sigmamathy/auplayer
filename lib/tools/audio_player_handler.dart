@@ -21,16 +21,15 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 	void _listenForDurationChanges() {
     player.durationStream.listen((duration) {
       int index = player.currentIndex ?? -1;
-      final newQueue = queue.value;
-      if (index == -1 || newQueue.isEmpty) {
+      final nq = queue.value;
+      if (index == -1 || nq.isEmpty) {
 				mediaItem.add(null);
 				return;
 			}
-      final oldMediaItem = newQueue[index];
-      final newMediaItem = oldMediaItem.copyWith(duration: duration);
-      newQueue[index] = newMediaItem;
-      queue.add(newQueue);
-      mediaItem.add(newMediaItem);
+      final m = nq[index].copyWith(duration: duration);
+      nq[index] = m;
+      queue.add(nq);
+      mediaItem.add(m);
     });
   }
 
@@ -79,8 +78,8 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
 	Future<void> removeMusicAt(int index) async {
 		playlist.removeAt(index);
-		final newQueue = queue.value..removeAt(index);
-		queue.add(newQueue);
+		final nq = queue.value..removeAt(index);
+		queue.add(nq);
 		if (playlist.length == 0) {
 			await pause();
 		}

@@ -11,55 +11,6 @@ class QueuePage extends StatefulWidget {
 
 class QueuePageState extends State<QueuePage> {
 
-	Widget proxyDecorator(Widget child, int index, Animation<double> animation) {
-		return AnimatedBuilder(
-			animation: animation,
-			builder: (BuildContext context, Widget? child) {
-				final double animValue = Curves.easeInOut.transform(animation.value);
-				final double elevation = lerpDouble(1, 6, animValue)!;
-				final double scale = lerpDouble(1, 1.02, animValue)!;
-				return Transform.scale(
-					scale: scale,
-					// Create a Card based on the color and the content of the dragged one
-					// and set its elevation to the animated value.
-					child: Card(
-						elevation: elevation,
-						color: Colors.black,
-						child: Text("hi"),
-					),
-				);
-			},
-			child: child,
-		);
-	}
-
-	Widget _queueList() {
-		final ah = AudioPlayerHandler.instance;
-		return StreamBuilder(
-			stream: ah.queue, 
-			builder: (_, s1) {
-				final queue = s1.data ?? [];
-				return StreamBuilder(
-					stream: ah.player.currentIndexStream,
-					builder: (_, s2) {
-						return Expanded(
-							child: ReorderableListView(
-								onReorder: (a, b) async {
-									if (a == b) return;
-									await ah.moveMusicAt(a, b);
-								},
-								proxyDecorator: proxyDecorator,
-								children: [...queue.asMap().entries.map(
-									(entry) => _QueueMusicCard(entry.key, entry.value.title, key: Key('$entry.key')))
-								],
-							)
-						);
-					}
-				);
-			}
-		);
-	}
-
 	@override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,16 +60,7 @@ class QueuePageState extends State<QueuePage> {
 			body: Column(
 				children: [
 					_MediaPlayerWidget(),
-					Expanded(
-						child: Card(
-							margin: EdgeInsets.fromLTRB(10, 0, 10, 10),
-							color: Colors.grey[850],
-							child: Padding(
-								padding: EdgeInsets.all(10),
-								child: _queueList(),
-							)
-						)
-					),
+					_QueueListWidget(),
 					NavigatePanel(1)
 				]
 			),
@@ -155,7 +97,7 @@ class _MediaPlayerWidget extends StatelessWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-						Text(_durationToTime(pos), style: TextStyle(color: Colors.white)),
+						Text(_durationToTimeFormat(pos), style: TextStyle(color: Colors.white)),
             Expanded(
 							child: Slider(
 								min: 0,
@@ -169,7 +111,7 @@ class _MediaPlayerWidget extends StatelessWidget {
 								}
 							)
 						),
-						Text(_durationToTime(dur), style: TextStyle(color: Colors.white)),
+						Text(_durationToTimeFormat(dur), style: TextStyle(color: Colors.white)),
           ],
         );
       },
@@ -238,12 +180,76 @@ class _MediaPlayerWidget extends StatelessWidget {
   }
 }
 
+class _QueueListWidget extends StatelessWidget {
+
+	Widget proxyDecorator(Widget child, int index, Animation<double> animation) {
+		return AnimatedBuilder(
+			animation: animation,
+			builder: (BuildContext context, Widget? child) {
+				final double animValue = Curves.easeInOut.transform(animation.value);
+				final double elevation = lerpDouble(1, 6, animValue)!;
+				final double scale = lerpDouble(1, 1.02, animValue)!;
+				return Transform.scale(
+					scale: scale,
+					child: _QueueMusicCard(
+						index,
+						AudioPlayerHandler.instance.queue.value[index].title,
+						key: Key('$index'),
+						elevation: elevation
+					)
+				);
+			},
+			child: child,
+		);
+	}
+
+	Widget _queueList() {
+		final ah = AudioPlayerHandler.instance;
+		return StreamBuilder(
+			stream: ah.queue, 
+			builder: (_, s1) {
+				final queue = s1.data ?? [];
+				return StreamBuilder(
+					stream: ah.player.currentIndexStream,
+					builder: (_, s2) {
+						return ReorderableListView(
+							onReorder: (a, b) async {
+								if (a == b) return;
+								await ah.moveMusicAt(a, b);
+							},
+							proxyDecorator: proxyDecorator,
+							children: [...queue.asMap().entries.map(
+								(entry) => _QueueMusicCard(entry.key, entry.value.title, key: Key('$entry.key')))
+							],
+						);
+					}
+				);
+			}
+		);
+	}
+
+	@override
+  Widget build(BuildContext context) {
+		return Expanded(
+			child: Card(
+				margin: EdgeInsets.fromLTRB(10, 0, 10, 10),
+				color: Colors.grey[850],
+				child: Padding(
+					padding: EdgeInsets.all(10),
+					child: _queueList(),
+				)
+			)
+		);
+  }
+}
+
 class _QueueMusicCard extends StatelessWidget {
 
 	final int index;
 	final String name;
+	final double? elevation;
 
-	const _QueueMusicCard(this.index, this.name, { super.key });
+	const _QueueMusicCard(this.index, this.name, { super.key, this.elevation });
 
 	@override
   Widget build(BuildContext context) {
@@ -255,6 +261,7 @@ class _QueueMusicCard extends StatelessWidget {
 				}
 			},
 			child: Card(
+				elevation: elevation,
 				color: Colors.black,
 				child: ListTile(
 					leading: Text(
@@ -280,11 +287,11 @@ class _QueueMusicCard extends StatelessWidget {
   }
 }
 
-String _durationToTime(Duration duration) {
-	String ng = duration.isNegative ? '-' : '';
-
+String _durationToTimeFormat(Duration duration) {
 	String td(int n) => n.toString().padLeft(2, "0");
-	String tdm = td(duration.inMinutes.remainder(60).abs());
-	String tds = td(duration.inSeconds.remainder(60).abs());
-	return "$ng${duration.inHours > 0 ? "${td(duration.inHours)}:" : ""}$tdm:$tds";
+	final n = duration.isNegative ? '-' : '';
+	final h = duration.inHours > 0 ? '${duration.inHours}:' : '';
+	final m = td(duration.inMinutes.remainder(60).abs());
+	final s = td(duration.inSeconds.remainder(60).abs());
+	return "$n$h$m:$s";
 }
