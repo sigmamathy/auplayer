@@ -22,7 +22,10 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     player.durationStream.listen((duration) {
       int index = player.currentIndex ?? -1;
       final newQueue = queue.value;
-      if (index == -1 || newQueue.isEmpty) return;
+      if (index == -1 || newQueue.isEmpty) {
+				mediaItem.add(null);
+				return;
+			}
       final oldMediaItem = newQueue[index];
       final newMediaItem = oldMediaItem.copyWith(duration: duration);
       newQueue[index] = newMediaItem;
@@ -42,9 +45,9 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 	PlaybackState _transformEvent(PlaybackEvent event) {
     return PlaybackState(
       controls: [
-        MediaControl.skipToPrevious,
+        if (!isAtFirstMusic()) MediaControl.skipToPrevious,
         if (player.playing) MediaControl.pause else MediaControl.play,
-        MediaControl.skipToNext,
+        if (!isAtLastMusic()) MediaControl.skipToNext,
       ],
       systemActions: const {
         MediaAction.seek,
@@ -79,8 +82,27 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		final newQueue = queue.value..removeAt(index);
 		queue.add(newQueue);
 		if (playlist.length == 0) {
-			stop();
-			mediaItem.add(null);
+			pause();
+		}
+	}
+
+	Future<void> removeAll() async {
+		playlist.clear();
+		final nq = queue.value..clear();
+		queue.add(nq);
+		pause();
+	}
+
+	Future<void> moveMusicAt(int from, int to) async {
+		int i = crntIndex();
+		Duration pos = player.position;
+		playlist.move(from, to);
+		final a = queue.value[from];
+		queue.value..remove(a)..insert(to, a);
+		queue.add(queue.value);
+		if (i == from) {
+			player.seek(pos, index: to);
+			mediaItem.add(queue.value[to]);
 		}
 	}
   
@@ -93,10 +115,12 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
 	int crntIndex() => player.currentIndex ?? -1;
 
-	bool isAtLastMusic() {
-		if (player.currentIndex == null) return false;
-		return player.currentIndex! >= playlist.length - 1;
-	}
+	bool isAtFirstMusic() =>
+		player.currentIndex != null && player.currentIndex! <= 0;
+
+	bool isAtLastMusic() =>
+		player.currentIndex != null && player.currentIndex! >= playlist.length - 1;
+	
 }
 
 Stream<MediaState> get mediaStateStream =>

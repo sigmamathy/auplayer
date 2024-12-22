@@ -13,7 +13,7 @@ class FileManager {
 
 	static late FileManager instance;
 
-	String crntDir = "/storage/emulated/0/Music/Songs";
+	String crntDir = "/storage/emulated/0/Music";
 	List<FileInfo> fileList = [];
 	
 	Future<void> requestPermission() async {

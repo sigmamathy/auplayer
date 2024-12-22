@@ -14,6 +14,7 @@ void main() async {
       androidNotificationChannelId: 'com.example.auplayer.channel.audio',
       androidNotificationChannelName: 'Audio playback',
       androidNotificationOngoing: true,
+			androidStopForegroundOnPause: true,
     ),
   );
 

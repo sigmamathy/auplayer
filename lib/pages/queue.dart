@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:auplayer/navigate_panel.dart';
@@ -15,18 +16,47 @@ class QueuePageState extends State<QueuePage> {
     super.initState();
   }
 
+	Widget proxyDecorator(
+        Widget child, int index, Animation<double> animation) {
+      return AnimatedBuilder(
+        animation: animation,
+        builder: (BuildContext context, Widget? child) {
+          final double animValue = Curves.easeInOut.transform(animation.value);
+          final double elevation = lerpDouble(1, 6, animValue)!;
+          final double scale = lerpDouble(1, 1.02, animValue)!;
+          return Transform.scale(
+            scale: scale,
+            // Create a Card based on the color and the content of the dragged one
+            // and set its elevation to the animated value.
+            child: Card(
+              elevation: elevation,
+              color: Colors.black,
+							child: Text("hi"),
+            ),
+          );
+        },
+        child: child,
+      );
+    }
+
 	Widget _queueList() {
+		final ah = AudioPlayerHandler.instance;
 		return StreamBuilder(
-			stream: AudioPlayerHandler.instance.queue, 
+			stream: ah.queue, 
 			builder: (_, s1) {
 				final queue = s1.data ?? [];
 				return StreamBuilder(
-					stream: AudioPlayerHandler.instance.player.currentIndexStream,
+					stream: ah.player.currentIndexStream,
 					builder: (_, s2) {
 						return Expanded(
-							child: ListView(
+							child: ReorderableListView(
+								onReorder: (a, b) {
+									if (a == b) return;
+									ah.moveMusicAt(a, b);
+								},
+								proxyDecorator: proxyDecorator,
 								children: [...queue.asMap().entries.map(
-									(entry) => _QueueMusicCard(entry.key, entry.value.title))
+									(entry) => _QueueMusicCard(entry.key, entry.value.title, key: Key('$entry.key')))
 								],
 							)
 						);
@@ -54,6 +84,11 @@ class QueuePageState extends State<QueuePage> {
 						Expanded(child: SizedBox()),
 						PopupMenuButton<int>(
 							onSelected: (int value) async {
+								switch (value) {
+									case 0:
+										AudioPlayerHandler.instance.removeAll();
+										break;
+								}
 							},
 							itemBuilder: (BuildContext context) {
 								return <PopupMenuEntry<int>>[
@@ -85,21 +120,8 @@ class QueuePageState extends State<QueuePage> {
 							margin: EdgeInsets.fromLTRB(10, 0, 10, 10),
 							color: Colors.grey[850],
 							child: Padding(
-							padding: EdgeInsets.all(10),
-								child: Column(
-									children: [
-										Text(
-											"Music Queue",
-											style: TextStyle(
-												fontSize: 16.0,
-												fontWeight: FontWeight.bold,
-												color: Colors.white
-											)
-										),
-										Divider(color: Colors.grey[800], height: 20.0),
-										_queueList()
-									]
-								)
+								padding: EdgeInsets.all(10),
+								child: _queueList(),
 							)
 						)
 					),
@@ -227,7 +249,7 @@ class _QueueMusicCard extends StatelessWidget {
 	final int index;
 	final String name;
 
-	const _QueueMusicCard(this.index, this.name);
+	const _QueueMusicCard(this.index, this.name, { super.key });
 
 	@override
   Widget build(BuildContext context) {
