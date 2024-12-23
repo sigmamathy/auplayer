@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
-import 'package:auplayer/navigate_panel.dart';
+import 'package:auplayer/pages/commons/navigate_panel.dart';
 import 'package:auplayer/tools/audio_player_handler.dart';
 
 class QueuePage extends StatefulWidget {

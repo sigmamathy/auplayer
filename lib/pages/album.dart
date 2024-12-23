@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:auplayer/navigate_panel.dart';
+import 'package:auplayer/pages/commons/navigate_panel.dart';
 import 'package:auplayer/tools/audio_player_handler.dart';
 import 'package:auplayer/tools/file_manager.dart';
 
@@ -9,13 +9,8 @@ class AlbumPage extends StatefulWidget {
 	@override State<StatefulWidget> createState() => AlbumPageState();
 }
 
-enum AlbumReadMode {
-	FOLDER_VIEW,
-	LABEL_VIEW,
-	FOLDER_SELECT_VIEW;
-
-	static AlbumReadMode crntMode = FOLDER_VIEW;
-}
+bool _selectMode = false;
+bool _directoryMode = true;
 
 class AlbumPageState extends State<AlbumPage> {
 
@@ -32,88 +27,91 @@ class AlbumPageState extends State<AlbumPage> {
 		_executeOnStartOnly();
   }
 
+	AppBar _appBar() {
+		final fm = FileManager.instance;
+		return AppBar(
+			title: Row(
+				children: [
+					Text("auplayer",
+						style: TextStyle(
+							color: Colors.white,
+							fontFamily: 'RougeScript', 
+							fontWeight: FontWeight.bold,
+							fontSize: 30.0
+						)
+					),
+					Expanded(child: SizedBox()),
+					IconButton(
+						icon: Icon(
+							!_directoryMode ? Icons.perm_media : Icons.bookmarks,
+							color: Colors.white
+						),
+						onPressed: () {
+							setState(() { _directoryMode = !_directoryMode; });
+						},
+					),
+					PopupMenuButton<int>(
+						onSelected: (int value) async {
+							switch (value) {
+								case 0:
+									await fm.refreshFileList();
+									setState(() {});
+									break;
+								case 1:
+									await fm.setHomeDirectory(fm.crntDir);
+									setState(() {});
+									break;
+							}
+						},
+						itemBuilder: (BuildContext context) {
+							return <PopupMenuEntry<int>>[
+								PopupMenuItem<int>(
+									value: 0,
+									child: Row(
+										children: [
+											Icon(Icons.refresh, color: Colors.white),
+											SizedBox(width: 6.0),
+											Text('Refresh', style: TextStyle(color: Colors.white)),
+										]
+									)
+								),
+								PopupMenuItem<int>(
+									value: 1,
+									child: Row(
+										children: [
+											Icon(Icons.home, color: Colors.white),
+											SizedBox(width: 6.0),
+											Text('Set as Home', style: TextStyle(color: Colors.white)),
+										]
+									)
+								),
+								PopupMenuItem<int>(
+									value: 2,
+									child: Row(
+										children: [
+											Icon(Icons.help, color: Colors.white),
+											SizedBox(width: 6.0),
+											Text('Help', style: TextStyle(color: Colors.white)),
+										]
+									)
+								),
+							];
+						},
+						color: Colors.grey[800],
+						child: Icon(Icons.more_vert, color: Colors.white),
+					),
+				]
+			),
+			backgroundColor: Colors.deepPurple[700],
+		);
+	}
+
   @override
   Widget build(BuildContext context) {
 		final fm = FileManager.instance;
     return Scaffold(
 			backgroundColor: Colors.grey[800],
-			appBar: AppBar(
-				title: Row(
-					children: [
-						Text("auplayer",
-							style: TextStyle(
-								color: Colors.white,
-								fontFamily: 'RougeScript', 
-								fontWeight: FontWeight.bold,
-								fontSize: 30.0
-							)
-						),
-						Expanded(child: SizedBox()),
-						IconButton(
-							icon: Icon(
-								AlbumReadMode.crntMode == AlbumReadMode.FOLDER_VIEW ? Icons.perm_media : Icons.bookmarks,
-								color: Colors.white
-							),
-							onPressed: () {
-								
-								AlbumReadMode.crntMode = AlbumReadMode.crntMode == AlbumReadMode.FOLDER_VIEW ? AlbumReadMode.LABEL_VIEW : AlbumReadMode.FOLDER_VIEW;
-								setState((){});
-							},
-						),
-						PopupMenuButton<int>(
-							onSelected: (int value) async {
-								switch (value) {
-									case 0:
-										await fm.refreshFileList();
-										setState(() {});
-										break;
-									case 1:
-										await fm.setHomeDirectory(fm.crntDir);
-										setState(() {});
-										break;
-								}
-							},
-							itemBuilder: (BuildContext context) {
-								return <PopupMenuEntry<int>>[
-									PopupMenuItem<int>(
-										value: 0,
-										child: Row(
-											children: [
-												Icon(Icons.refresh, color: Colors.white),
-												SizedBox(width: 6.0),
-												Text('Refresh', style: TextStyle(color: Colors.white)),
-											]
-										)
-									),
-									PopupMenuItem<int>(
-										value: 1,
-										child: Row(
-											children: [
-												Icon(Icons.home, color: Colors.white),
-												SizedBox(width: 6.0),
-												Text('Set as Home', style: TextStyle(color: Colors.white)),
-											]
-										)
-									),
-									PopupMenuItem<int>(
-										value: 2,
-										child: Row(
-											children: [
-												Icon(Icons.help, color: Colors.white),
-												SizedBox(width: 6.0),
-												Text('Help', style: TextStyle(color: Colors.white)),
-											]
-										)
-									),
-								];
-							},
-							color: Colors.grey[800],
-							child: Icon(Icons.more_vert, color: Colors.white),
-						),
-					]
-				),
-				backgroundColor: Colors.deepPurple[700],
-			),
+			appBar: _appBar(),
 			body: Column(
 				children: [
 					Container(
