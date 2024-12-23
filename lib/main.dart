@@ -25,6 +25,13 @@ void main() async {
   runApp(
 		MaterialApp(
 			debugShowCheckedModeBanner: false,
+			theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF512DA8),
+          brightness: Brightness.dark,
+        ),
+      ),
 			initialRoute: '/album',
 			onGenerateRoute: (settings) {
 				switch (settings.name) {

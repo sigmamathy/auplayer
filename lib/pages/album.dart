@@ -4,13 +4,16 @@ import 'package:auplayer/pages/commons/navigate_panel.dart';
 import 'package:auplayer/tools/audio_player_handler.dart';
 import 'package:auplayer/tools/file_manager.dart';
 
+bool _folderViewMode = true;
+List<FileInfo> _selectedFiles = [];
+
+bool _isSelected(FileInfo fi) => _selectedFiles.any((f) => f.path == fi.path);
+VoidCallback? _pageSetState;
+
 class AlbumPage extends StatefulWidget {
 	const AlbumPage({ super.key });
 	@override State<StatefulWidget> createState() => AlbumPageState();
 }
-
-bool _selectMode = false;
-bool _folderViewMode = true;
 
 class AlbumPageState extends State<AlbumPage> {
 
@@ -24,6 +27,7 @@ class AlbumPageState extends State<AlbumPage> {
 	@override
   void initState() {
     super.initState();
+		_pageSetState = () => setState(() {});
 		_executeOnStartOnly();
   }
 
@@ -41,7 +45,7 @@ class AlbumPageState extends State<AlbumPage> {
 						)
 					),
 					Expanded(child: SizedBox()),
-					IconButton(
+					if (_selectedFiles.isEmpty) IconButton(
 						icon: Icon(
 							!_folderViewMode ? Icons.perm_media : Icons.bookmarks,
 							color: Colors.white
@@ -62,85 +66,28 @@ class AlbumPageState extends State<AlbumPage> {
 									setState(() {});
 									break;
 								case 3: {
-									String input = '';
-									bool ok = false;
-									await showDialog(
-										context: ctx,
-										builder: (ctx) => AlertDialog(
-											title: Text('New Label'),
-											content: TextField(
-												decoration: InputDecoration(
-													border: OutlineInputBorder(),
-													labelText: 'name',
-												),
-												onSubmitted: (str) => input = str
-											),
-											actions: [
-												TextButton(
-													child: Text('CANCEL'),
-													onPressed: () {
-														ok = false;
-														Navigator.pop(ctx);
-													}
-												),
-												TextButton(
-													child: Text('CONFIRM'),
-													onPressed: () {
-														ok = true;
-														Navigator.pop(ctx);
-													}
-												)
-											]
-										)
-									);
-									print('$ok: $input');
-									await fm.createLabel(input, 0xFFFF0000);
+									await _userCreateNewLabel(ctx);
 									setState(() {});
 								}
 							}
 						},
 						itemBuilder: (BuildContext context) {
+							PopupMenuItem<int> makeItem(int n, IconData ic, String text) => PopupMenuItem<int>(
+								value: n,
+								child: Row(
+									children: [
+										Icon(ic, color: Colors.white),
+										SizedBox(width: 6.0),
+										Text(text, style: TextStyle(color: Colors.white)),
+									]
+								)
+							);
+
 							final items = [
-								PopupMenuItem<int>(
-									value: 0,
-									child: Row(
-										children: [
-											Icon(Icons.refresh, color: Colors.white),
-											SizedBox(width: 6.0),
-											Text('Refresh', style: TextStyle(color: Colors.white)),
-										]
-									)
-								),
-								PopupMenuItem<int>(
-									value: 1,
-									child: Row(
-										children: [
-											Icon(Icons.home, color: Colors.white),
-											SizedBox(width: 6.0),
-											Text('Set as Home', style: TextStyle(color: Colors.white)),
-										]
-									)
-								),
-								PopupMenuItem<int>(
-									value: 2,
-									child: Row(
-										children: [
-											Icon(Icons.help, color: Colors.white),
-											SizedBox(width: 6.0),
-											Text('Help', style: TextStyle(color: Colors.white)),
-										]
-									)
-								),
-								PopupMenuItem<int>(
-									value: 3,
-									child: Row(
-										children: [
-											Icon(Icons.add, color: Colors.white),
-											SizedBox(width: 6.0),
-											Text('Add Label', style: TextStyle(color: Colors.white)),
-										]
-									)
-								),
+								makeItem(0, Icons.refresh, "Refresh"),
+								makeItem(1, Icons.home, "Set as Home"),
+								makeItem(2, Icons.help, "Help"),
+								makeItem(3, Icons.add, "Add Label"),
 							];
 
 							if (_folderViewMode) {
@@ -175,6 +122,8 @@ class _FolderViewWidget extends StatefulWidget {
 
 class _FolderViewWidgetState extends State<_FolderViewWidget> {
 
+	void _setState() => setState(() {});
+
 	@override
   Widget build(BuildContext context) {
 		final fm = FileManager.instance;
@@ -195,13 +144,49 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 				),
 				Expanded(
 					child: ListView (
-						children: [...fm.fileList.map((fi) => _FileInfoCard(fi, () async {
-							await fm.refreshFileList(newDir: fi.path);
-							setState(() {});
-						})), SizedBox(height: 10.0)]
+						children: [...fm.fileList.map((fi) =>
+							fi.isDir ? _DirectoryCard(fi, _setState) : _AudioFileCard(fi, _setState)), SizedBox(height: 10.0)]
 					)
 				),
-				NavigatePanel(0)
+				_selectedFiles.isEmpty ? NavigatePanel(0) : Container(
+					height: 70,
+					color: const Color(0xFF13283B),
+					child: Row(
+						mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+						children: [
+							TextButton(
+								child: Column(
+									mainAxisAlignment: MainAxisAlignment.center,
+									children: [
+										Icon(Icons.select_all, color: Colors.cyan),
+										Text("Select All", style: TextStyle(color: Colors.cyan))
+									]
+								),
+								onPressed: () {
+									for (FileInfo fi in fm.fileList) {
+										if (!_isSelected(fi)) {
+											_selectedFiles.add(fi);
+										}
+									}
+									_pageSetState!();
+								}
+							),
+							TextButton(
+								child: Column(
+									mainAxisAlignment: MainAxisAlignment.center,
+									children: [
+										Icon(Icons.deselect, color: Colors.cyan),
+										Text("Cancel", style: TextStyle(color: Colors.cyan))
+									]
+								),
+								onPressed: () {
+									_selectedFiles.clear();
+									_pageSetState!();
+								}
+							),
+						]
+					)
+				)
 			]
 		);
   }
@@ -235,40 +220,118 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
   }
 }
 
-class _FileInfoCard extends StatelessWidget {
+Future<void> _userCreateNewLabel(BuildContext ctx) async {
+	final fm = FileManager.instance;
+	String input = '';
+	bool ok = false;
+
+	await showDialog(
+		context: ctx,
+		builder: (ctx) => AlertDialog(
+			title: Text('New Label'),
+			content: TextField(
+				decoration: InputDecoration(
+					border: OutlineInputBorder(),
+					labelText: 'name',
+				),
+				onChanged: (str) => input = str
+			),
+			actions: [
+				TextButton(
+					child: Text('CANCEL'),
+					onPressed: () {
+						ok = false;
+						Navigator.pop(ctx);
+					}
+				),
+				TextButton(
+					child: Text('CONFIRM'),
+					onPressed: () {
+						ok = true;
+						Navigator.pop(ctx);
+					}
+				)
+			]
+		)
+	);
+
+	if (ok) {
+		await fm.createLabel(input, 0xFFFF0000);
+	}
+}
+
+class _AudioFileCard extends StatelessWidget {
 
 	final FileInfo fi;
-	final VoidCallback onDirTapped;
+	final VoidCallback updateState;
+	const _AudioFileCard(this.fi, this.updateState);
 
-	const _FileInfoCard(this.fi, this.onDirTapped);
+	void toggleSelection() {
+		if (_isSelected(fi)) {
+			_selectedFiles.removeWhere((f) => f.path == fi.path);
+		} else {
+			_selectedFiles.add(fi);
+		}
+	}
 
-	Widget audioFileBuild() {
-		return Card(
-			margin: EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 0.0),
-			color: Colors.grey[900],
-			child: ListTile(
-				leading: Icon(Icons.audiotrack, color: Colors.white),
-				title: Text(
-					fi.name,
-					style: TextStyle(
-						color: Colors.white,
-						fontSize: 14.0
+	@override
+  Widget build(BuildContext context) {
+		bool isSelected = _isSelected(fi);
+		return GestureDetector(
+			onTap: () { 
+				if (_selectedFiles.isNotEmpty) {
+					toggleSelection();
+					_pageSetState!();
+				}
+			},
+			onLongPress: () {
+				toggleSelection();
+				_pageSetState!();
+			},
+			child: Card(
+				margin: EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 0.0),
+				color: Colors.grey[900],
+				shape: isSelected ? RoundedRectangleBorder(
+					borderRadius: BorderRadius.circular(10.0),
+					side: BorderSide(
+						color: Colors.cyan,
+						width: 2.0,
 					),
-				),
-				trailing: IconButton(
-					icon: Icon(Icons.add, color: Colors.white),
-					onPressed: () {
-						AudioPlayerHandler.instance.addMusic(fi);
-					}
+				) : null,
+				child: ListTile(
+					leading: Icon(Icons.audiotrack, color: isSelected ? Colors.cyan : Colors.white),
+					title: Text(
+						fi.name,
+						style: TextStyle(
+							color: isSelected ? Colors.cyan : Colors.white,
+							fontSize: 14.0
+						),
+					),
+					trailing: _selectedFiles.isEmpty ? IconButton(
+						icon: Icon(Icons.add, color: Colors.white),
+						onPressed: () {
+							AudioPlayerHandler.instance.addMusic(fi);
+						}
+					) : null
 				)
 			)
 		);
-	}
+  }
+}
 
-	Widget directoryBuild()
-	{	
+class _DirectoryCard extends StatelessWidget {
+	
+	final FileInfo fi;
+	final VoidCallback updateState;
+	const _DirectoryCard(this.fi, this.updateState);
+
+	@override
+  Widget build(BuildContext context) {
 		return GestureDetector(
-			onTap: onDirTapped,
+			onTap: () async {
+				await FileManager.instance.refreshFileList(newDir: fi.path);
+				updateState();
+			},
 			child: Card(
 				margin: EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 0.0),
 				color: Colors.grey[900],
@@ -284,10 +347,7 @@ class _FileInfoCard extends StatelessWidget {
 				)
 			)
 		);
-	}
-
-	@override
-  Widget build(BuildContext context) {
-		return fi.isDir ? directoryBuild() : audioFileBuild();
   }
 }
+
+
