@@ -11,6 +11,12 @@ class FileInfo {
 	FileInfo(this.path, this.name, this.isDir);
 }
 
+class LabelInfo {
+	String name;
+	int color;
+	LabelInfo(this.name, this.color);
+}
+
 class FileManager {
 
 	static late FileManager instance;
@@ -21,7 +27,7 @@ class FileManager {
 	late String crntDir;
 	List<FileInfo> fileList = [];
 
-	late List<String> labels;
+	late List<LabelInfo> labels;
 
 	Future<void> init() async {
 		// load config files first
@@ -84,6 +90,13 @@ class FileManager {
 			return a.name.compareTo(b.name);
 		});
 	}
+
+	Future<bool> createLabel(String name, int color) async {
+		if (labels.any((l) => l.name == name) || _db.hasSQLInjection(name)) return false;
+		_db.insertLabel(name, color);
+		labels.add(LabelInfo(name, color));
+		return true;
+	}
 }
 
 class _DatabaseHandler {
@@ -98,7 +111,7 @@ class _DatabaseHandler {
 
 	Future<void> _createTablesIfNotExists() async {
 		await _db.execute('CREATE TABLE IF NOT EXISTS labels'
-			' (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);');
+			' (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color INT UNSIGNED);');
 		await _db.execute('CREATE TABLE IF NOT EXISTS songs'
 			' (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT);');
 		await _db.execute('CREATE TABLE IF NOT EXISTS matches'
@@ -109,13 +122,13 @@ class _DatabaseHandler {
 		return sql.contains("'") || sql.contains('"') || sql.contains('\\');
 	}
 
-	Future<List<String>> selectLabels() async {
-		List<Map> records = await _db.rawQuery('SELECT name FROM labels');
-		return records.map((m) => m['name'].toString()).toList();
+	Future<List<LabelInfo>> selectLabels() async {
+		List<Map> records = await _db.rawQuery('SELECT name, color FROM labels');
+		return records.map((m) => LabelInfo(m['name'].toString(), m['color'] as int)).toList();
 	}
 
-	Future<bool> insertLabel(String name) async {
-		_db.execute('INSERT INTO labels (name) VALUES ($name);');
+	Future<bool> insertLabel(String name, int color) async {
+		_db.execute('INSERT INTO labels (name, color) VALUES (\'$name\', $color);');
 		return true;
 	}
 

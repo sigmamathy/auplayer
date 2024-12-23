@@ -10,7 +10,7 @@ class AlbumPage extends StatefulWidget {
 }
 
 bool _selectMode = false;
-bool _directoryMode = true;
+bool _folderViewMode = true;
 
 class AlbumPageState extends State<AlbumPage> {
 
@@ -27,7 +27,7 @@ class AlbumPageState extends State<AlbumPage> {
 		_executeOnStartOnly();
   }
 
-	AppBar _appBar() {
+	AppBar _appBar(BuildContext ctx) {
 		final fm = FileManager.instance;
 		return AppBar(
 			title: Row(
@@ -43,11 +43,11 @@ class AlbumPageState extends State<AlbumPage> {
 					Expanded(child: SizedBox()),
 					IconButton(
 						icon: Icon(
-							!_directoryMode ? Icons.perm_media : Icons.bookmarks,
+							!_folderViewMode ? Icons.perm_media : Icons.bookmarks,
 							color: Colors.white
 						),
 						onPressed: () {
-							setState(() { _directoryMode = !_directoryMode; });
+							setState(() { _folderViewMode = !_folderViewMode; });
 						},
 					),
 					PopupMenuButton<int>(
@@ -61,10 +61,46 @@ class AlbumPageState extends State<AlbumPage> {
 									await fm.setHomeDirectory(fm.crntDir);
 									setState(() {});
 									break;
+								case 3: {
+									String input = '';
+									bool ok = false;
+									await showDialog(
+										context: ctx,
+										builder: (ctx) => AlertDialog(
+											title: Text('New Label'),
+											content: TextField(
+												decoration: InputDecoration(
+													border: OutlineInputBorder(),
+													labelText: 'name',
+												),
+												onSubmitted: (str) => input = str
+											),
+											actions: [
+												TextButton(
+													child: Text('CANCEL'),
+													onPressed: () {
+														ok = false;
+														Navigator.pop(ctx);
+													}
+												),
+												TextButton(
+													child: Text('CONFIRM'),
+													onPressed: () {
+														ok = true;
+														Navigator.pop(ctx);
+													}
+												)
+											]
+										)
+									);
+									print('$ok: $input');
+									await fm.createLabel(input, 0xFFFF0000);
+									setState(() {});
+								}
 							}
 						},
 						itemBuilder: (BuildContext context) {
-							return <PopupMenuEntry<int>>[
+							final items = [
 								PopupMenuItem<int>(
 									value: 0,
 									child: Row(
@@ -95,9 +131,25 @@ class AlbumPageState extends State<AlbumPage> {
 										]
 									)
 								),
+								PopupMenuItem<int>(
+									value: 3,
+									child: Row(
+										children: [
+											Icon(Icons.add, color: Colors.white),
+											SizedBox(width: 6.0),
+											Text('Add Label', style: TextStyle(color: Colors.white)),
+										]
+									)
+								),
 							];
+
+							if (_folderViewMode) {
+								return [0, 1, 2].map((i) => items[i]).toList();
+							}
+
+							return [3, 2].map((i) => items[i]).toList();
 						},
-						color: Colors.grey[800],
+						color: Colors.grey[850],
 						child: Icon(Icons.more_vert, color: Colors.white),
 					),
 				]
@@ -108,43 +160,77 @@ class AlbumPageState extends State<AlbumPage> {
 
   @override
   Widget build(BuildContext context) {
-		final fm = FileManager.instance;
     return Scaffold(
 			backgroundColor: Colors.grey[800],
-			appBar: _appBar(),
-			body: Column(
-				children: [
-					Container(
-						color: Color.fromARGB(255, 65, 51, 94),
-						child: Row(
-							mainAxisAlignment: MainAxisAlignment.spaceBetween,
-							children: [
-								Text(fm.crntDir, style: TextStyle(color: Colors.white, fontSize: 10.0)),
-								SizedBox(
-									width: 25.0,
-									height: 25.0,
-									child: IconButton(
-										padding: EdgeInsets.all(0.0),
-										icon: Icon(Icons.folder),
-										onPressed: () {},
-										color: Colors.white,
-										iconSize: 15.0,
-									)
-								)
-							]
-						)
-					),
-					Expanded(
-						child: ListView (
-							children: [...fm.fileList.map((fi) => _FileInfoCard(fi, () async {
-								await fm.refreshFileList(newDir: fi.path);
-								setState(() {});
-							})), SizedBox(height: 10.0)]
-						)
-					),
-					NavigatePanel(0)
-				]
-			),
+			appBar: _appBar(context),
+			body: _folderViewMode ? _FolderViewWidget() : _LabelViewWidget()
+		);
+  }
+}
+
+class _FolderViewWidget extends StatefulWidget {
+	@override
+  State<StatefulWidget> createState() => _FolderViewWidgetState();
+}
+
+class _FolderViewWidgetState extends State<_FolderViewWidget> {
+
+	@override
+  Widget build(BuildContext context) {
+		final fm = FileManager.instance;
+		return Column(
+			children: [
+				Container(
+					color: Color.fromARGB(255, 65, 51, 94),
+					child: Row(
+						mainAxisAlignment: MainAxisAlignment.spaceBetween,
+						children: [
+							Text(
+								fm.crntDir,
+								textAlign: TextAlign.left,
+								style: TextStyle(color: Colors.white, fontSize: 10.0)
+							),
+						]
+					)
+				),
+				Expanded(
+					child: ListView (
+						children: [...fm.fileList.map((fi) => _FileInfoCard(fi, () async {
+							await fm.refreshFileList(newDir: fi.path);
+							setState(() {});
+						})), SizedBox(height: 10.0)]
+					)
+				),
+				NavigatePanel(0)
+			]
+		);
+  }
+}
+
+class _LabelViewWidget extends StatefulWidget {
+	@override
+  State<StatefulWidget> createState() => _LabelViewWidgetState();
+}
+
+class _LabelViewWidgetState extends State<_LabelViewWidget> {
+
+	@override
+  Widget build(BuildContext context) {
+		final fm = FileManager.instance;
+    return Column(
+			children: [
+				Expanded(
+					child: ListView(
+						children: [...fm.labels.map((l) => Card(
+							color: Color(l.color),
+							child: ListTile(
+								title: Text(l.name)
+							)
+						))]
+					)
+				),
+				NavigatePanel(0)
+			]
 		);
   }
 }
