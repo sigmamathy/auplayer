@@ -91,7 +91,7 @@ class AlbumPageState extends State<AlbumPage> {
 								makeItem(0, Icons.refresh, "Refresh"),
 								makeItem(1, Icons.home, "Set as Home"),
 								makeItem(2, Icons.help, "Help"),
-								makeItem(3, Icons.add, "Add Label"),
+								makeItem(3, Icons.new_label, "Add Label"),
 								makeItem(4, Icons.add, "Add to queue"),
 							];
 
@@ -225,12 +225,7 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
 			children: [
 				Expanded(
 					child: ListView(
-						children: [...fm.labels.map((l) => Card(
-							color: Color(l.color),
-							child: ListTile(
-								title: Text(l.name)
-							)
-						))]
+						children: [...fm.labels.map((l) => _LabelCard(l)), SizedBox(height: 10.0)]
 					)
 				),
 				NavigatePanel(0)
@@ -247,7 +242,10 @@ Future<void> _userCreateNewLabel(BuildContext ctx) async {
 	await showDialog(
 		context: ctx,
 		builder: (ctx) => AlertDialog(
-			title: Text('New Label'),
+			shape: RoundedRectangleBorder(
+				borderRadius: BorderRadius.circular(0.0),
+			),
+			title: Text('New Label', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
 			content: TextField(
 				decoration: InputDecoration(
 					border: OutlineInputBorder(),
@@ -275,7 +273,7 @@ Future<void> _userCreateNewLabel(BuildContext ctx) async {
 	);
 
 	if (ok) {
-		await fm.createLabel(input, 0xFFFF0000);
+		await fm.createLabel(input, 0xFFf75c95);
 	}
 }
 
@@ -369,4 +367,39 @@ class _DirectoryCard extends StatelessWidget {
   }
 }
 
+class _LabelCard extends StatelessWidget {
+	
+	final LabelInfo li;
+	const _LabelCard(this.li);
 
+	@override
+  Widget build(BuildContext context) {
+		return GestureDetector(
+			onTap: () async {
+				_pageSetState();
+			},
+			child: Card(
+				margin: EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 0.0),
+				color: Colors.grey[900],
+				elevation: 2.0,
+				shape: RoundedRectangleBorder(
+					borderRadius: BorderRadius.circular(10.0),
+					side: BorderSide(
+						color: Color(li.color),
+						width: 1.0,
+					),
+				),
+				child: ListTile(
+					leading: Icon(Icons.bookmark, color: Color(li.color)),
+					title: Text(
+						li.name,
+						style: TextStyle(
+							color: Color(li.color),
+							fontSize: 14.0
+						),
+					),
+				)
+			)
+		);
+  }
+}
