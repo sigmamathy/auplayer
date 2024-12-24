@@ -8,7 +8,7 @@ bool _folderViewMode = true;
 List<FileInfo> _selectedFiles = [];
 
 bool _isSelected(FileInfo fi) => _selectedFiles.any((f) => f.path == fi.path);
-VoidCallback? _pageSetState;
+VoidCallback _pageSetState = () => throw UnimplementedError();
 
 class AlbumPage extends StatefulWidget {
 	const AlbumPage({ super.key });
@@ -65,10 +65,14 @@ class AlbumPageState extends State<AlbumPage> {
 									await fm.setHomeDirectory(fm.crntDir);
 									setState(() {});
 									break;
-								case 3: {
+								case 3: 
 									await _userCreateNewLabel(ctx);
 									setState(() {});
-								}
+								case 4:
+									for (FileInfo fi in _selectedFiles) {
+										AudioPlayerHandler.instance.addMusic(fi);
+									}
+									break;
 							}
 						},
 						itemBuilder: (BuildContext context) {
@@ -88,9 +92,13 @@ class AlbumPageState extends State<AlbumPage> {
 								makeItem(1, Icons.home, "Set as Home"),
 								makeItem(2, Icons.help, "Help"),
 								makeItem(3, Icons.add, "Add Label"),
+								makeItem(4, Icons.add, "Add to queue"),
 							];
 
 							if (_folderViewMode) {
+								if (_selectedFiles.isNotEmpty)
+									return [0, 1, 4, 2].map((i) => items[i]).toList();
+
 								return [0, 1, 2].map((i) => items[i]).toList();
 							}
 
@@ -107,10 +115,17 @@ class AlbumPageState extends State<AlbumPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-			backgroundColor: Colors.grey[800],
-			appBar: _appBar(context),
-			body: _folderViewMode ? _FolderViewWidget() : _LabelViewWidget()
+    return PopScope(
+			canPop: _selectedFiles.isEmpty,
+			onPopInvokedWithResult: (bool didPop, Object? _) {
+				_selectedFiles.clear();
+				_pageSetState();
+			},
+			child: Scaffold(
+				backgroundColor: Colors.grey[800],
+				appBar: _appBar(context),
+				body: _folderViewMode ? _FolderViewWidget() : _LabelViewWidget()
+			)
 		);
   }
 }
@@ -150,7 +165,11 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 				),
 				_selectedFiles.isEmpty ? NavigatePanel(0) : Container(
 					height: 70,
-					color: const Color(0xFF13283B),
+					// color: const Color(0xFF13283B),
+					decoration: BoxDecoration(
+						border: Border(top: BorderSide(color: Colors.cyan)),
+						color: const Color(0xFF13283B),
+					),
 					child: Row(
 						mainAxisAlignment: MainAxisAlignment.spaceEvenly,
 						children: [
@@ -158,8 +177,8 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 								child: Column(
 									mainAxisAlignment: MainAxisAlignment.center,
 									children: [
-										Icon(Icons.select_all, color: Colors.cyan),
-										Text("Select All", style: TextStyle(color: Colors.cyan))
+										Icon(Icons.select_all, color: Colors.white),
+										Text("Select All", style: TextStyle(color: Colors.white))
 									]
 								),
 								onPressed: () {
@@ -168,20 +187,20 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 											_selectedFiles.add(fi);
 										}
 									}
-									_pageSetState!();
+									_pageSetState();
 								}
 							),
 							TextButton(
 								child: Column(
 									mainAxisAlignment: MainAxisAlignment.center,
 									children: [
-										Icon(Icons.deselect, color: Colors.cyan),
-										Text("Cancel", style: TextStyle(color: Colors.cyan))
+										Icon(Icons.deselect, color: Colors.white),
+										Text("Cancel", style: TextStyle(color: Colors.white))
 									]
 								),
 								onPressed: () {
 									_selectedFiles.clear();
-									_pageSetState!();
+									_pageSetState();
 								}
 							),
 						]
@@ -281,12 +300,12 @@ class _AudioFileCard extends StatelessWidget {
 			onTap: () { 
 				if (_selectedFiles.isNotEmpty) {
 					toggleSelection();
-					_pageSetState!();
+					_pageSetState();
 				}
 			},
 			onLongPress: () {
 				toggleSelection();
-				_pageSetState!();
+				_pageSetState();
 			},
 			child: Card(
 				margin: EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 0.0),
