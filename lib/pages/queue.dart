@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:auplayer/pages/commons/three_dots_button.dart';
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:auplayer/pages/commons/navigate_panel.dart';
@@ -27,40 +28,11 @@ class QueuePageState extends State<QueuePage> {
 							)
 						),
 						Expanded(child: SizedBox()),
-						PopupMenuButton<int>(
-							onSelected: (int value) async {
-								switch (value) {
-									case 0:
-										AudioPlayerHandler.instance.removeAll();
-										break;
-								}
-							},
-							itemBuilder: (BuildContext context) {
-								return <PopupMenuEntry<int>>[
-									PopupMenuItem<int>(
-										value: 0,
-										child: Row(
-											children: [
-												Icon(Icons.delete, color: Colors.white),
-												SizedBox(width: 6.0),
-												Text('Clear Queue', style: TextStyle(color: Colors.white)),
-											]
-										)
-									),
-									PopupMenuItem<int>(
-										value: 2,
-										child: Row(
-											children: [
-												Icon(Icons.help, color: Colors.white),
-												SizedBox(width: 6.0),
-												Text('Help', style: TextStyle(color: Colors.white)),
-											]
-										)
-									),
-								];
-							},
-							color: Colors.grey[800],
-							child: Icon(Icons.more_vert, color: Colors.white),
+						ThreeDotsButton(
+							items: [
+								ThreeDotsItem(Icons.delete, "Clear Queue", AudioPlayerHandler.instance.removeAll),
+								ThreeDotsItem(Icons.help, "Help", (){}),
+							],
 						),
 					]
 				),
