@@ -81,6 +81,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		final nq = queue.value..removeAt(index);
 		queue.add(nq);
 		if (playlist.length == 0) {
+			mediaItem.add(null);
 			await pause();
 		}
 	}
@@ -89,6 +90,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		await playlist.clear();
 		final nq = queue.value..clear();
 		queue.add(nq);
+		mediaItem.add(null);
 		await pause();
 	}
 
