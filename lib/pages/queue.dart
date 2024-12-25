@@ -70,7 +70,7 @@ class QueuePageState extends State<QueuePage> {
 				children: [
 					_MediaPlayerWidget(),
 					_QueueListWidget(),
-					NavigatePanel(1)
+					NavigatePanel('/queue')
 				]
 			),
 		);

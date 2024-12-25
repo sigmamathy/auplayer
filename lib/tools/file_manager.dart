@@ -92,11 +92,16 @@ class FileManager {
 	}
 
 	Future<bool> createLabel(String name, int color) async {
-		if (labels.any((l) => l.name == name) || _db.hasSQLInjection(name)) return false;
-		_db.insertLabel(name, color);
+		if (labels.any((l) => l.name == name) || _db.hasSQLInjection(name) || name.isEmpty) return false;
+		await _db.insertLabel(name, color);
 		labels.add(LabelInfo(name, color));
 		return true;
 	}
+
+	Future<void> assignLabelToFiles(String label, List<FileInfo> paths) async {
+		_db.insertMatches(label, paths);
+	}
+
 }
 
 class _DatabaseHandler {
@@ -127,9 +132,25 @@ class _DatabaseHandler {
 		return records.map((m) => LabelInfo(m['name'].toString(), m['color'] as int)).toList();
 	}
 
-	Future<bool> insertLabel(String name, int color) async {
-		_db.execute('INSERT INTO labels (name, color) VALUES (\'$name\', $color);');
-		return true;
+	Future<void> insertLabel(String name, int color) async {
+		await _db.execute('INSERT INTO labels (name, color) VALUES (\'$name\', $color);');
+	}
+
+	Future<void> insertMatches(String label, List<FileInfo> fis) async {
+		List<Map> m = await _db.rawQuery('SELECT id FROM labels WHERE name == \'$label\';');
+		int lid = m[0]['id'] as int;
+		for (final fi in fis) {
+			String path = fi.path;
+			m = await _db.rawQuery('SELECT id FROM songs WHERE path == \'$path\';');
+			if (m.isEmpty) {
+				await _db.execute('INSERT INTO songs (path) VALUES (\'$path\');');
+				m = await _db.rawQuery('SELECT id FROM songs WHERE path == \'$path\';');
+			}
+			int sid = m[0]['id'] as int;
+			if ((await _db.rawQuery('SELECT * FROM matches WHERE sid == $sid AND lid == $lid;')).isEmpty) {
+				await _db.execute('INSERT INTO matches VALUES ($sid, $lid);');
+			}
+		}
 	}
 
 }

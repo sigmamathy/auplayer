@@ -1,4 +1,6 @@
+import 'package:auplayer/pages/commons/three_dots_button.dart';
 import 'package:flutter/material.dart';
+import 'package:auplayer/pages/commons/icon_text_button.dart';
 
 import 'package:auplayer/pages/commons/navigate_panel.dart';
 import 'package:auplayer/tools/audio_player_handler.dart';
@@ -54,58 +56,14 @@ class AlbumPageState extends State<AlbumPage> {
 							setState(() { _folderViewMode = !_folderViewMode; });
 						},
 					),
-					PopupMenuButton<int>(
-						onSelected: (int value) async {
-							switch (value) {
-								case 0:
-									await fm.refreshFileList();
-									setState(() {});
-									break;
-								case 1:
-									await fm.setHomeDirectory(fm.crntDir);
-									setState(() {});
-									break;
-								case 3: 
-									await _userCreateNewLabel(ctx);
-									setState(() {});
-								case 4:
-									for (FileInfo fi in _selectedFiles) {
-										AudioPlayerHandler.instance.addMusic(fi);
-									}
-									break;
-							}
-						},
-						itemBuilder: (BuildContext context) {
-							PopupMenuItem<int> makeItem(int n, IconData ic, String text) => PopupMenuItem<int>(
-								value: n,
-								child: Row(
-									children: [
-										Icon(ic, color: Colors.white),
-										SizedBox(width: 6.0),
-										Text(text, style: TextStyle(color: Colors.white)),
-									]
-								)
-							);
-
-							final items = [
-								makeItem(0, Icons.refresh, "Refresh"),
-								makeItem(1, Icons.home, "Set as Home"),
-								makeItem(2, Icons.help, "Help"),
-								makeItem(3, Icons.new_label, "Add Label"),
-								makeItem(4, Icons.add, "Add to queue"),
-							];
-
-							if (_folderViewMode) {
-								if (_selectedFiles.isNotEmpty)
-									return [0, 1, 4, 2].map((i) => items[i]).toList();
-
-								return [0, 1, 2].map((i) => items[i]).toList();
-							}
-
-							return [3, 2].map((i) => items[i]).toList();
-						},
-						color: Colors.grey[850],
-						child: Icon(Icons.more_vert, color: Colors.white),
+					ThreeDotsButton(
+						items: [
+							ThreeDotsItem(Icons.refresh, "Refresh", () => setState(() async => await fm.refreshFileList())),
+							ThreeDotsItem(Icons.home, "Set as Home", () => setState(() async => await fm.setHomeDirectory(fm.crntDir))),
+							ThreeDotsItem(Icons.help, "Help", (){}),
+							ThreeDotsItem(Icons.new_label, "Add Label", () => setState(() async => await _userCreateNewLabel(context))),
+						],
+						indices: _folderViewMode ? [0, 1, 2] : [3, 2],
 					),
 				]
 			),
@@ -163,9 +121,8 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 							fi.isDir ? _DirectoryCard(fi, _setState) : _AudioFileCard(fi, _setState)), SizedBox(height: 10.0)]
 					)
 				),
-				_selectedFiles.isEmpty ? NavigatePanel(0) : Container(
+				_selectedFiles.isEmpty ? NavigatePanel('') : Container(
 					height: 70,
-					// color: const Color(0xFF13283B),
 					decoration: BoxDecoration(
 						border: Border(top: BorderSide(color: Colors.cyan)),
 						color: const Color(0xFF13283B),
@@ -173,36 +130,22 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 					child: Row(
 						mainAxisAlignment: MainAxisAlignment.spaceEvenly,
 						children: [
-							TextButton(
-								child: Column(
-									mainAxisAlignment: MainAxisAlignment.center,
-									children: [
-										Icon(Icons.select_all, color: Colors.white),
-										Text("Select All", style: TextStyle(color: Colors.white))
-									]
-								),
-								onPressed: () {
-									for (FileInfo fi in fm.fileList) {
-										if (!_isSelected(fi)) {
-											_selectedFiles.add(fi);
-										}
+							IconTextButton(Icons.select_all, "Select All", Colors.white, () {
+								for (FileInfo fi in fm.fileList) {
+									if (!_isSelected(fi)) {
+										_selectedFiles.add(fi);
 									}
-									_pageSetState();
 								}
-							),
-							TextButton(
-								child: Column(
-									mainAxisAlignment: MainAxisAlignment.center,
-									children: [
-										Icon(Icons.deselect, color: Colors.white),
-										Text("Cancel", style: TextStyle(color: Colors.white))
-									]
-								),
-								onPressed: () {
-									_selectedFiles.clear();
-									_pageSetState();
-								}
-							),
+								_pageSetState();
+							}),
+							IconTextButton(Icons.deselect, "Cancel", Colors.white, () {
+								_selectedFiles.clear();
+								_pageSetState();
+							}),
+							IconTextButton(Icons.playlist_add, "Add to Queue", Colors.white,
+								() => _selectedFiles.forEach(AudioPlayerHandler.instance.addMusic)),
+							IconTextButton(Icons.bookmark_add, "Add to Label", Colors.white,
+								() {}),
 						]
 					)
 				)
@@ -228,7 +171,7 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
 						children: [...fm.labels.map((l) => _LabelCard(l)), SizedBox(height: 10.0)]
 					)
 				),
-				NavigatePanel(0)
+				NavigatePanel('/album')
 			]
 		);
   }
