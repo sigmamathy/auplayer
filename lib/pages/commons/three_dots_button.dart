@@ -12,9 +12,8 @@ class ThreeDotsButton extends StatelessWidget {
 	final List<ThreeDotsItem> items;
 	final List<int>? indices;
 	final Widget? child;
-	final Offset? offset;
 
-	const ThreeDotsButton({ super.key, required this.items, this.indices, this.child, this.offset });
+	const ThreeDotsButton({ super.key, required this.items, this.indices, this.child });
 
 	@override
   Widget build(BuildContext context) {
@@ -35,7 +34,6 @@ class ThreeDotsButton extends StatelessWidget {
 					.map((i) => makeItem(i, items[i].ic, items[i].text)).toList();
 			},
 			color: const Color(0xFF303030),
-			offset: offset ?? const Offset(0, 0),
 			child: child ?? Icon(Icons.more_vert, color: Colors.white, size: 30.0),
 		);
   }

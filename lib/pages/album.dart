@@ -1,4 +1,5 @@
 import 'package:auplayer/pages/commons/checkbox_list.dart';
+import 'package:auplayer/pages/commons/mini_color_picker.dart';
 import 'package:auplayer/pages/commons/three_dots_button.dart';
 import 'package:flutter/material.dart';
 import 'package:auplayer/pages/commons/icon_text_button.dart';
@@ -6,6 +7,7 @@ import 'package:auplayer/pages/commons/icon_text_button.dart';
 import 'package:auplayer/pages/commons/navigate_panel.dart';
 import 'package:auplayer/tools/audio_player_handler.dart';
 import 'package:auplayer/tools/file_manager.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 bool _folderViewMode = true;
 List<FileInfo> _selectedFiles = [];
@@ -59,10 +61,13 @@ class AlbumPageState extends State<AlbumPage> {
 					),
 					ThreeDotsButton(
 						items: [
-							ThreeDotsItem(Icons.refresh, "Refresh", () => setState(() async => await fm.refreshFileList())),
-							ThreeDotsItem(Icons.home, "Set as Home", () => setState(() async => await fm.setHomeDirectory(fm.crntDir))),
+							ThreeDotsItem(Icons.refresh, "Refresh",
+								() async { await fm.refreshFileList(); setState((){}); }),
+							ThreeDotsItem(Icons.home, "Set as Home",
+								() async { await fm.setHomeDirectory(fm.crntDir); setState(() {}); }),
 							ThreeDotsItem(Icons.help, "Help", (){}),
-							ThreeDotsItem(Icons.new_label, "Add Label", () => setState(() async => await _userCreateNewLabel(context))),
+							ThreeDotsItem(Icons.new_label, "Add Label",
+								() async { await _userCreateNewLabel(context); setState(() {}); }),
 						],
 						indices: _folderViewMode ? [0, 1, 2] : [3, 2],
 					),
@@ -82,6 +87,7 @@ class AlbumPageState extends State<AlbumPage> {
 			},
 			child: Scaffold(
 				backgroundColor: Colors.grey[800],
+				resizeToAvoidBottomInset: false,
 				appBar: _appBar(context),
 				body: _folderViewMode ? _FolderViewWidget() : _LabelViewWidget()
 			)
@@ -205,43 +211,46 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
 Future<void> _userCreateNewLabel(BuildContext ctx) async {
 	final fm = FileManager.instance;
 	String input = '';
-	bool ok = false;
-
-	await showDialog(
+	Color color = Colors.red;
+	bool? ok = await showDialog(
 		context: ctx,
 		builder: (ctx) => AlertDialog(
 			shape: RoundedRectangleBorder(
 				borderRadius: BorderRadius.circular(0.0),
 			),
 			title: Text('New Label', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
-			content: TextField(
-				decoration: InputDecoration(
-					border: OutlineInputBorder(),
-					labelText: 'name',
-				),
-				onChanged: (str) => input = str
+			content: Row(
+				mainAxisSize: MainAxisSize.min,
+				children: [
+					MiniColorPicker(ctx, (c) => color = c),
+					SizedBox(
+						width: 200,
+						height: 40,
+						child: TextField(
+							decoration: InputDecoration(border: OutlineInputBorder(), labelText: 'Enter Name'),
+							onChanged: (str) => input = str
+						)
+					),
+				]
 			),
 			actions: [
 				TextButton(
 					child: Text('CANCEL'),
-					onPressed: () {
-						ok = false;
-						Navigator.pop(ctx);
-					}
+					onPressed: () => Navigator.pop(ctx, false)
 				),
 				TextButton(
 					child: Text('CONFIRM'),
-					onPressed: () {
-						ok = true;
-						Navigator.pop(ctx);
-					}
+					onPressed: () => Navigator.pop(ctx, true)
 				)
 			]
 		)
 	);
 
-	if (ok) {
-		await fm.createLabel(input, 0xFFf75c95);
+	print('$ok: ${color.r}, ${color.g}, ${color.b}');
+
+	if (ok ?? false) {
+		int cv = 0xFF000000 | ((color.r * 255).toInt() << 16) | ((color.g * 255).toInt() << 8) | (color.b * 255).toInt();
+		await fm.createLabel(input, cv);
 	}
 }
 
@@ -366,6 +375,14 @@ class _LabelCard extends StatelessWidget {
 							fontSize: 14.0
 						),
 					),
+					trailing: ThreeDotsButton(
+						items: [
+							ThreeDotsItem(Icons.edit_square, "Rename", () {}),
+							ThreeDotsItem(Icons.border_color, "Set Color", () {}),
+							ThreeDotsItem(Icons.delete, "Delete", () {}),
+						],
+						child: Icon(Icons.more_vert, color: Color(li.color)),
+					)
 				)
 			)
 		);

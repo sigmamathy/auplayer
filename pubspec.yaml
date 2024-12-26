@@ -39,6 +39,7 @@ dependencies:
   audio_service: ^0.18.16
   rxdart: ^0.28.0
   sqflite: ^2.4.1
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:

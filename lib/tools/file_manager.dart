@@ -112,9 +112,11 @@ class _DatabaseHandler {
 		Directory dir = await getApplicationDocumentsDirectory();
 		_db = await openDatabase('$dir/userdata.db');
 		_createTablesIfNotExists();
+
 	}
 
 	Future<void> _createTablesIfNotExists() async {
+		// await _db.execute('DROP TABLE labels; DROP TABLE songs; DROP TABLE matches;');
 		await _db.execute('CREATE TABLE IF NOT EXISTS labels'
 			' (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color INT UNSIGNED);');
 		await _db.execute('CREATE TABLE IF NOT EXISTS songs'
