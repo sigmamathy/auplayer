@@ -24,6 +24,7 @@ class _MiniColorPickerState extends State<MiniColorPicker> {
 				decoration: BoxDecoration(
 					shape: BoxShape.circle,
 					color: crnt,
+					border: Border.all(color: Colors.white, width: 1.0),
 				),
 			)
 		);
@@ -36,6 +37,7 @@ class _MiniColorPickerState extends State<MiniColorPicker> {
 				shape: RoundedRectangleBorder(
 					borderRadius: BorderRadius.circular(0.0),
 				),
+				title: Text('Choose a color:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
 				content: SingleChildScrollView(
 					child: ColorPicker(
 						pickerColor: crnt,
@@ -48,10 +50,15 @@ class _MiniColorPickerState extends State<MiniColorPicker> {
 						enableAlpha: false,
 						displayThumbColor: true,
 						paletteType: PaletteType.hsvWithHue,
-						labelTypes: const [],
-						pickerAreaBorderRadius: const BorderRadius.all(Radius.circular(10)),
+						// labelTypes: const [],
 					)
-				)
+				),
+				actions: [
+					TextButton(
+						onPressed: () => Navigator.pop(ctx),
+						child: Text('DONE'),
+					)
+				],
 			)
 		);
 	}

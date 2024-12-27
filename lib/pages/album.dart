@@ -7,7 +7,6 @@ import 'package:auplayer/pages/commons/icon_text_button.dart';
 import 'package:auplayer/pages/commons/navigate_panel.dart';
 import 'package:auplayer/tools/audio_player_handler.dart';
 import 'package:auplayer/tools/file_manager.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 bool _folderViewMode = true;
 List<FileInfo> _selectedFiles = [];
@@ -67,7 +66,7 @@ class AlbumPageState extends State<AlbumPage> {
 								() async { await fm.setHomeDirectory(fm.crntDir); setState(() {}); }),
 							ThreeDotsItem(Icons.help, "Help", (){}),
 							ThreeDotsItem(Icons.new_label, "Add Label",
-								() async { await _userCreateNewLabel(context); setState(() {}); }),
+								() async { await _userCreateOrEditLabel(context, null); setState(() {}); }),
 						],
 						indices: _folderViewMode ? [0, 1, 2] : [3, 2],
 					),
@@ -208,7 +207,7 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
   }
 }
 
-Future<void> _userCreateNewLabel(BuildContext ctx) async {
+Future<void> _userCreateOrEditLabel(BuildContext ctx, LabelInfo? label) async {
 	final fm = FileManager.instance;
 	String input = '';
 	Color color = Colors.red;
@@ -218,7 +217,7 @@ Future<void> _userCreateNewLabel(BuildContext ctx) async {
 			shape: RoundedRectangleBorder(
 				borderRadius: BorderRadius.circular(0.0),
 			),
-			title: Text('New Label', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
+			title: Text(label != null ? 'New Label' : "Edit Label", style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
 			content: Row(
 				mainAxisSize: MainAxisSize.min,
 				children: [
@@ -246,11 +245,9 @@ Future<void> _userCreateNewLabel(BuildContext ctx) async {
 		)
 	);
 
-	print('$ok: ${color.r}, ${color.g}, ${color.b}');
-
 	if (ok ?? false) {
 		int cv = 0xFF000000 | ((color.r * 255).toInt() << 16) | ((color.g * 255).toInt() << 8) | (color.b * 255).toInt();
-		await fm.createLabel(input, cv);
+		await (label == null ? fm.createLabel(input, cv) : fm.editLabel(label, LabelInfo(input, cv)));
 	}
 }
 
@@ -377,8 +374,7 @@ class _LabelCard extends StatelessWidget {
 					),
 					trailing: ThreeDotsButton(
 						items: [
-							ThreeDotsItem(Icons.edit_square, "Rename", () {}),
-							ThreeDotsItem(Icons.border_color, "Set Color", () {}),
+							ThreeDotsItem(Icons.edit, "Edit", () async { await _userCreateOrEditLabel(context, li); _pageSetState(); }),
 							ThreeDotsItem(Icons.delete, "Delete", () {}),
 						],
 						child: Icon(Icons.more_vert, color: Color(li.color)),

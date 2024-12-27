@@ -28,6 +28,7 @@ class FileManager {
 	List<FileInfo> fileList = [];
 
 	late List<LabelInfo> labels;
+	LabelInfo? crntLabel;
 
 	Future<void> init() async {
 		// load config files first
@@ -98,6 +99,15 @@ class FileManager {
 		return true;
 	}
 
+	Future<bool> editLabel(LabelInfo ol, LabelInfo nl) async {
+		if (labels.any((l) => l.name == nl.name) || _db.hasSQLInjection(nl.name) || nl.name.isEmpty) return false;
+		await _db.updateLabel(ol, nl);
+		final li = labels.firstWhere((l) => l.name == ol.name);
+		li.name = nl.name;
+		li.color = nl.color;
+		return true;
+	}
+
 	Future<void> assignLabelToFiles(String label, List<FileInfo> paths) async {
 		_db.insertMatches(label, paths);
 	}
@@ -136,6 +146,10 @@ class _DatabaseHandler {
 
 	Future<void> insertLabel(String name, int color) async {
 		await _db.execute('INSERT INTO labels (name, color) VALUES (\'$name\', $color);');
+	}
+
+	Future<void> updateLabel(LabelInfo ol, LabelInfo nl) async {
+		await _db.execute('UPDATE labels SET name = \'${nl.name}\', color = ${nl.color} WHERE name = \'${ol.name}\'');
 	}
 
 	Future<void> insertMatches(String label, List<FileInfo> fis) async {
