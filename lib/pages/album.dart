@@ -207,7 +207,58 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
 						]
 					)
 				),
-				NavigatePanel('/album')
+				_selectedFiles.isEmpty ? NavigatePanel('/album') : Container(
+					height: 70,
+					decoration: BoxDecoration(
+						border: Border(top: BorderSide(color: Colors.cyan)),
+						color: const Color(0xFF13283B),
+					),
+					child: Row(
+						mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+						children: [
+							IconTextButton(Icons.select_all, "Select All", Colors.white, () {
+								for (FileInfo fi in fm.labelItems) {
+									if (!_isSelected(fi)) {
+										_selectedFiles.add(fi);
+									}
+								}
+								_pageSetState();
+							}),
+							IconTextButton(Icons.deselect, "Cancel", Colors.white, () {
+								_selectedFiles.clear();
+								_pageSetState();
+							}),
+							IconTextButton(Icons.playlist_add, "Add to Queue", Colors.white,
+								() => _selectedFiles.forEach(AudioPlayerHandler.instance.addMusic)),
+							IconTextButton(Icons.bookmark_add, "Add to Label", Colors.white, () async {
+								List<String> lbs = [];
+								bool? ok = await showDialog(
+									context: context,
+									builder: (ctx) => AlertDialog(
+										shape: RoundedRectangleBorder(
+											borderRadius: BorderRadius.circular(0.0),
+										),
+										title: Text('Select labels to add:', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
+										content: SizedBox(
+											width: 300,
+											height: 500,
+											child: CheckboxList(fm.labels.map((l) => l.name).toList(), lbs)
+										),
+										actions: [
+											TextButton( child: Text('CANCEL'), onPressed: () => Navigator.pop(ctx, false)),
+											TextButton( child: Text('CONFIRM'), onPressed: () => Navigator.pop(ctx, true))
+										]
+									)
+								);
+								if (ok ?? false) {
+									for (final label in lbs) {
+										await fm.assignLabelToFiles(label, _selectedFiles);
+									}
+								}
+							}),
+						]
+					)
+				)
 			]
 		);
   }
@@ -359,7 +410,7 @@ class _LabelCard extends StatelessWidget {
 	Widget _nonNullBuild(BuildContext context) {
 		return GestureDetector(
 			onTap: () async {
-				FileManager.instance.setCurrentLabel(li!.name);
+				await FileManager.instance.setCurrentLabel(li!.name);
 				_pageSetState();
 			},
 			child: Card(

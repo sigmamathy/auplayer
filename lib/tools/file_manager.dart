@@ -169,7 +169,9 @@ class _DatabaseHandler {
 	}
 
 	Future<void> deleteLabel(String name) async {
-		await _db.execute('DELETE FROM labels WHERE name = \'$name\'');
+		int id = (await _db.rawQuery('SELECT id FROM labels WHERE name = \'$name\';'))[0]['id'] as int;
+		await _db.execute('DELETE FROM labels WHERE id == $id;');
+		await _db.execute('DELETE FROM matches WHERE lid == $id;');
 	}
 
 	Future<void> insertMatches(String label, List<FileInfo> fis) async {
