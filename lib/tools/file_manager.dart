@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:collection/collection.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -29,6 +30,7 @@ class FileManager {
 
 	late List<LabelInfo> labels;
 	LabelInfo? crntLabel;
+	List<FileInfo> labelItems = [];
 
 	Future<void> init() async {
 		// load config files first
@@ -92,6 +94,15 @@ class FileManager {
 		});
 	}
 
+	Future<void> setCurrentLabel(String? name) async {
+		crntLabel = labels.firstWhereOrNull((l) => l.name == name);
+		if (crntLabel == null) {
+			labelItems.clear();
+			return;
+		}
+		labelItems = await _db.findMatches(name!);
+	}
+
 	Future<bool> createLabel(String name, int color) async {
 		if (labels.any((l) => l.name == name) || _db.hasSQLInjection(name) || name.isEmpty) return false;
 		await _db.insertLabel(name, color);
@@ -106,6 +117,11 @@ class FileManager {
 		li.name = nl.name;
 		li.color = nl.color;
 		return true;
+	}
+
+	Future<void> deleteLabel(String name) async {
+		await _db.deleteLabel(name);
+		labels.removeWhere((l) => l.name == name);
 	}
 
 	Future<void> assignLabelToFiles(String label, List<FileInfo> paths) async {
@@ -152,6 +168,10 @@ class _DatabaseHandler {
 		await _db.execute('UPDATE labels SET name = \'${nl.name}\', color = ${nl.color} WHERE name = \'${ol.name}\'');
 	}
 
+	Future<void> deleteLabel(String name) async {
+		await _db.execute('DELETE FROM labels WHERE name = \'$name\'');
+	}
+
 	Future<void> insertMatches(String label, List<FileInfo> fis) async {
 		List<Map> m = await _db.rawQuery('SELECT id FROM labels WHERE name == \'$label\';');
 		int lid = m[0]['id'] as int;
@@ -169,4 +189,16 @@ class _DatabaseHandler {
 		}
 	}
 
+	Future<List<FileInfo>> findMatches(String label) async {
+		List<FileInfo> result = [];
+		List<Map> lm = await _db.rawQuery('SELECT id FROM labels WHERE name == \'$label\';');
+		int lid = lm[0]['id'] as int;
+		lm = await _db.rawQuery('SELECT sid FROM matches WHERE lid == $lid');
+		for (final m in lm) {
+			final sid = m['sid'] as int;
+			String path = (await _db.rawQuery('SELECT path FROM songs WHERE id == $sid'))[0]['path'].toString();
+			result.add(FileInfo(path, basename(path), false));
+		}
+		return result;
+	}
 }

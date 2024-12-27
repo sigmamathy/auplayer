@@ -2,16 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class MiniColorPicker extends StatefulWidget {
+
 	final BuildContext ctx;
+	final Color? initColor;
 	final Function(Color) callback;
-	const MiniColorPicker(this.ctx, this.callback, {super.key});
+
+	const MiniColorPicker(this.ctx, this.initColor, this.callback, {super.key});
+
 	@override
   State<StatefulWidget> createState() => _MiniColorPickerState();
 }
 
 class _MiniColorPickerState extends State<MiniColorPicker> {
 
-	Color crnt = Colors.red;
+	late Color crnt;
+
+	@override
+  void initState() {
+    super.initState();
+		crnt = widget.initColor ?? Colors.red;
+  }
 
 	@override
   Widget build(BuildContext context) {

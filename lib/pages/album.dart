@@ -124,7 +124,7 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 				Expanded(
 					child: ListView (
 						children: [...fm.fileList.map((fi) =>
-							fi.isDir ? _DirectoryCard(fi, _setState) : _AudioFileCard(fi, _setState)), SizedBox(height: 10.0)]
+							fi.isDir ? _DirectoryCard(fi, _setState) : _AudioFileCard(fi)), SizedBox(height: 10.0)]
 					)
 				),
 				_selectedFiles.isEmpty ? NavigatePanel('/album') : Container(
@@ -198,7 +198,13 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
 			children: [
 				Expanded(
 					child: ListView(
-						children: [...fm.labels.map((l) => _LabelCard(l)), SizedBox(height: 10.0)]
+						children: [
+							if (fm.crntLabel != null) _LabelCard(null),
+							...(fm.crntLabel == null ?
+								fm.labels.map((l) => _LabelCard(l))
+								: fm.labelItems.map((f) => _AudioFileCard(f))),
+							SizedBox(height: 10.0)
+						]
 					)
 				),
 				NavigatePanel('/album')
@@ -217,14 +223,14 @@ Future<void> _userCreateOrEditLabel(BuildContext ctx, LabelInfo? label) async {
 			shape: RoundedRectangleBorder(
 				borderRadius: BorderRadius.circular(0.0),
 			),
-			title: Text(label != null ? 'New Label' : "Edit Label", style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
+			title: Text(label == null ? 'New Label' : "Edit Label", style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
 			content: Row(
 				mainAxisSize: MainAxisSize.min,
 				children: [
-					MiniColorPicker(ctx, (c) => color = c),
+					MiniColorPicker(ctx, label != null ? Color(label.color) : null, (c) => color = c),
 					SizedBox(
 						width: 200,
-						height: 40,
+						height: 50,
 						child: TextField(
 							decoration: InputDecoration(border: OutlineInputBorder(), labelText: 'Enter Name'),
 							onChanged: (str) => input = str
@@ -254,8 +260,7 @@ Future<void> _userCreateOrEditLabel(BuildContext ctx, LabelInfo? label) async {
 class _AudioFileCard extends StatelessWidget {
 
 	final FileInfo fi;
-	final VoidCallback updateState;
-	const _AudioFileCard(this.fi, this.updateState);
+	const _AudioFileCard(this.fi);
 
 	void toggleSelection() {
 		if (_isSelected(fi)) {
@@ -343,13 +348,18 @@ class _DirectoryCard extends StatelessWidget {
 
 class _LabelCard extends StatelessWidget {
 	
-	final LabelInfo li;
+	final LabelInfo? li;
 	const _LabelCard(this.li);
 
 	@override
   Widget build(BuildContext context) {
+		return li != null ? _nonNullBuild(context) : _nullBuild(context);
+  }
+
+	Widget _nonNullBuild(BuildContext context) {
 		return GestureDetector(
 			onTap: () async {
+				FileManager.instance.setCurrentLabel(li!.name);
 				_pageSetState();
 			},
 			child: Card(
@@ -359,28 +369,92 @@ class _LabelCard extends StatelessWidget {
 				shape: RoundedRectangleBorder(
 					borderRadius: BorderRadius.circular(10.0),
 					side: BorderSide(
-						color: Color(li.color),
+						color: Color(li!.color),
 						width: 1.0,
 					),
 				),
 				child: ListTile(
-					leading: Icon(Icons.bookmark, color: Color(li.color)),
+					leading: Icon(Icons.bookmark, color: Color(li!.color)),
 					title: Text(
-						li.name,
+						li!.name,
 						style: TextStyle(
-							color: Color(li.color),
+							color: Color(li!.color),
 							fontSize: 14.0
 						),
 					),
-					trailing: ThreeDotsButton(
-						items: [
-							ThreeDotsItem(Icons.edit, "Edit", () async { await _userCreateOrEditLabel(context, li); _pageSetState(); }),
-							ThreeDotsItem(Icons.delete, "Delete", () {}),
-						],
-						child: Icon(Icons.more_vert, color: Color(li.color)),
-					)
+					trailing: _trailingButton(context),
 				)
 			)
 		);
-  }
+	}
+
+	Widget _nullBuild(BuildContext context) {
+		final fm = FileManager.instance;
+		return GestureDetector(
+			onTap: () async {
+				FileManager.instance.setCurrentLabel(null);
+				_pageSetState();
+			},
+			child: Card(
+				margin: EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 0.0),
+				color: Colors.grey[900],
+				elevation: 2.0,
+				shape: RoundedRectangleBorder(
+					borderRadius: BorderRadius.circular(10.0),
+					side: BorderSide(
+						color: Color(fm.crntLabel!.color),
+						width: 1.0,
+					),
+				),
+				child: ListTile(
+					leading: Icon(Icons.bookmark, color: Color(fm.crntLabel!.color)),
+					title: Text(
+						"..",
+						style: TextStyle(
+							color: Color(fm.crntLabel!.color),
+							fontSize: 14.0
+						),
+					),
+				)
+			)
+		);
+	}
+
+	Widget _trailingButton(BuildContext context) {
+		return ThreeDotsButton(
+			items: [
+				ThreeDotsItem(Icons.edit, "Edit", () async { await _userCreateOrEditLabel(context, li); _pageSetState(); }),
+				ThreeDotsItem(Icons.delete, "Delete", () async {
+					bool? ok = await showDialog(
+						context: context,
+						builder: (ctx) => AlertDialog(
+							shape: RoundedRectangleBorder(
+								borderRadius: BorderRadius.circular(0.0),
+							),
+							title: Text(
+								'Alert',
+								style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold)
+							),
+							content: Text('Are you sure you want to delete "${li!.name}"? This action cannot be undone.'),
+							actions: [
+								TextButton(
+									onPressed: () => Navigator.pop(ctx, false),
+									child: Text('NO'),
+								),
+								TextButton(
+									onPressed: () => Navigator.pop(ctx, true),
+									child: Text('YES'),
+								)
+							]
+						)
+					);
+					if (ok ?? false) {
+						await FileManager.instance.deleteLabel(li!.name);
+						_pageSetState();
+					}
+				}),
+			],
+			child: Icon(Icons.more_vert, color: Color(li!.color)),
+		);
+	}
 }
