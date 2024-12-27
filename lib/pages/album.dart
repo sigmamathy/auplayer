@@ -283,6 +283,7 @@ Future<void> _userCreateOrEditLabel(BuildContext ctx, LabelInfo? label) async {
 						width: 200,
 						height: 50,
 						child: TextField(
+							controller: TextEditingController(text: label?.name ?? ''),
 							decoration: InputDecoration(border: OutlineInputBorder(), labelText: 'Enter Name'),
 							onChanged: (str) => input = str
 						)

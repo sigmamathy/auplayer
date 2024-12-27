@@ -111,7 +111,7 @@ class FileManager {
 	}
 
 	Future<bool> editLabel(LabelInfo ol, LabelInfo nl) async {
-		if (labels.any((l) => l.name == nl.name) || _db.hasSQLInjection(nl.name) || nl.name.isEmpty) return false;
+		if (labels.any((l) => ol.name != nl.name && l.name == nl.name) || _db.hasSQLInjection(nl.name) || nl.name.isEmpty) return false;
 		await _db.updateLabel(ol, nl);
 		final li = labels.firstWhere((l) => l.name == ol.name);
 		li.name = nl.name;
