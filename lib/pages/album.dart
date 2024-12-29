@@ -10,6 +10,8 @@ import 'package:auplayer/tools/file_manager.dart';
 
 bool _folderViewMode = true;
 List<FileInfo> _selectedFiles = [];
+bool _searchMode = false;
+String _searchValue = "";
 
 bool _isSelected(FileInfo fi) => _selectedFiles.any((f) => f.path == fi.path);
 VoidCallback _pageSetState = () => throw UnimplementedError();
@@ -40,23 +42,46 @@ class AlbumPageState extends State<AlbumPage> {
 		return AppBar(
 			title: Row(
 				children: [
-					Text("auplayer",
-						style: TextStyle(
-							color: Colors.white,
-							fontFamily: 'RougeScript', 
-							fontWeight: FontWeight.bold,
-							fontSize: 30.0
+					if (_searchMode) ...[
+						Flexible(
+							child: SizedBox(
+								height: 40.0,
+								child: TextFormField(
+									style: TextStyle(color: Colors.white),
+									decoration: InputDecoration(
+										hintText: 'Type Something to Search',
+										hintStyle: TextStyle(fontStyle: FontStyle.italic),
+										suffixIcon: IconButton(
+											icon: Icon(Icons.clear, color: Colors.white),
+											onPressed: () => setState(() { _searchValue = ""; _searchMode = false; }),                 
+										)
+									), 
+									onChanged: (String? value) => setState(() => _searchValue = value!),
+								)
+							)
 						)
-					),
-					Expanded(child: SizedBox()),
+					]
+					else ...[
+						Text("auplayer",
+							style: TextStyle(
+								color: Colors.white,
+								fontFamily: 'RougeScript', 
+								fontWeight: FontWeight.bold,
+								fontSize: 30.0
+							)
+						),
+						Expanded(child: SizedBox()),
+						IconButton(
+							icon: Icon(Icons.search, color: Colors.white, size: 30.0),
+							onPressed: () => setState(() => _searchMode = true),
+						)
+					],
 					if (_selectedFiles.isEmpty) IconButton(
 						icon: Icon(
 							!_folderViewMode ? Icons.perm_media : Icons.bookmarks,
 							color: Colors.white
 						),
-						onPressed: () {
-							setState(() { _folderViewMode = !_folderViewMode; });
-						},
+						onPressed: () => setState(() => _folderViewMode = !_folderViewMode),
 					),
 					ThreeDotsButton(
 						items: [
@@ -123,7 +148,7 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 				),
 				Expanded(
 					child: ListView (
-						children: [...fm.fileList.map((fi) =>
+						children: [..._filterBySearch(fm.fileList).map((fi) =>
 							fi.isDir ? _DirectoryCard(fi, _setState) : _AudioFileCard(fi)), SizedBox(height: 10.0)]
 					)
 				),
@@ -226,6 +251,10 @@ class _BottomSelectPanel extends StatelessWidget {
 			)
 		);
   }
+}
+
+List<FileInfo> _filterBySearch(List<FileInfo> fis) {
+	return fis.where((fi) => fi.name.contains(_searchValue)).toList();
 }
 
 Future<void> _userCreateOrEditLabel(BuildContext ctx, LabelInfo? label) async {
