@@ -17,7 +17,7 @@ class IconTextButton extends StatelessWidget {
 				mainAxisAlignment: MainAxisAlignment.center,
 				children: [
 					Icon(ic, color: color, size: 25),
-					Text(text, style: TextStyle(color: color, fontSize: 12))
+					Text(text, style: TextStyle(color: color, fontSize: 10))
 				]
 			),
 		);

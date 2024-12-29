@@ -193,15 +193,17 @@ class _QueueListWidget extends StatelessWidget {
 				return StreamBuilder(
 					stream: ah.player.currentIndexStream,
 					builder: (_, s2) {
-						return ReorderableListView(
-							onReorder: (a, b) async {
-								if (a == b) return;
-								await ah.moveMusicAt(a, b);
-							},
-							proxyDecorator: proxyDecorator,
-							children: [...queue.asMap().entries.map(
-								(entry) => _QueueMusicCard(entry.key, entry.value.title, key: Key('$entry.key')))
-							],
+						return Scrollbar(
+							child: ReorderableListView(
+								onReorder: (a, b) async {
+									if (a == b) return;
+									await ah.moveMusicAt(a, b);
+								},
+								proxyDecorator: proxyDecorator,
+								children: [...queue.asMap().entries.map(
+									(entry) => _QueueMusicCard(entry.key, entry.value.title, key: Key('$entry.key')))
+								],
+							)
 						);
 					}
 				);

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 class CheckboxList extends StatefulWidget {
 
-	final List<String> list;
-	final List<String> checked;
+	final Map<String, bool?> labelMap;
 
-	const CheckboxList(this.list, this.checked, {super.key});
+	const CheckboxList(this.labelMap, {super.key});
 
 	@override
   State<StatefulWidget> createState() => _CheckboxListState();
@@ -14,13 +13,17 @@ class CheckboxList extends StatefulWidget {
 class _CheckboxListState extends State<CheckboxList> {
 	@override
   Widget build(BuildContext context) {
-    return ListView(
-			children: widget.list.map((s) => CheckboxListTile(
-				title: Text(s),
-				value: widget.checked.contains(s),
-				onChanged: (bool? nv) => setState(() => nv! ? widget.checked.add(s) : widget.checked.remove(s)),
-				controlAffinity: ListTileControlAffinity.leading,
-			)).toList()
+    return Scrollbar(
+			thumbVisibility: true,
+			child: ListView(
+				children: widget.labelMap.keys.map((s) => CheckboxListTile(
+					tristate: widget.labelMap[s] == null,
+					title: Text(s),
+					value: widget.labelMap[s],
+					onChanged: (bool? nv) => setState(() => widget.labelMap[s] = nv),
+					controlAffinity: ListTileControlAffinity.leading,
+				)).toList()
+			)
 		);
   }
 }

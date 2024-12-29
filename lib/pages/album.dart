@@ -127,58 +127,7 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 							fi.isDir ? _DirectoryCard(fi, _setState) : _AudioFileCard(fi)), SizedBox(height: 10.0)]
 					)
 				),
-				_selectedFiles.isEmpty ? NavigatePanel('/album') : Container(
-					height: 70,
-					decoration: BoxDecoration(
-						border: Border(top: BorderSide(color: Colors.cyan)),
-						color: const Color(0xFF13283B),
-					),
-					child: Row(
-						mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-						children: [
-							IconTextButton(Icons.select_all, "Select All", Colors.white, () {
-								for (FileInfo fi in fm.fileList) {
-									if (!_isSelected(fi)) {
-										_selectedFiles.add(fi);
-									}
-								}
-								_pageSetState();
-							}),
-							IconTextButton(Icons.deselect, "Cancel", Colors.white, () {
-								_selectedFiles.clear();
-								_pageSetState();
-							}),
-							IconTextButton(Icons.playlist_add, "Add to Queue", Colors.white,
-								() => _selectedFiles.forEach(AudioPlayerHandler.instance.addMusic)),
-							IconTextButton(Icons.bookmark_add, "Add to Label", Colors.white, () async {
-								List<String> lbs = [];
-								bool? ok = await showDialog(
-									context: context,
-									builder: (ctx) => AlertDialog(
-										shape: RoundedRectangleBorder(
-											borderRadius: BorderRadius.circular(0.0),
-										),
-										title: Text('Select labels to add:', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
-										content: SizedBox(
-											width: 300,
-											height: 500,
-											child: CheckboxList(fm.labels.map((l) => l.name).toList(), lbs)
-										),
-										actions: [
-											TextButton( child: Text('CANCEL'), onPressed: () => Navigator.pop(ctx, false)),
-											TextButton( child: Text('CONFIRM'), onPressed: () => Navigator.pop(ctx, true))
-										]
-									)
-								);
-								if (ok ?? false) {
-									for (final label in lbs) {
-										await fm.assignLabelToFiles(label, _selectedFiles);
-									}
-								}
-							}),
-						]
-					)
-				)
+				_selectedFiles.isEmpty ? NavigatePanel('/album') : _BottomSelectPanel()
 			]
 		);
   }
@@ -207,67 +156,82 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
 						]
 					)
 				),
-				_selectedFiles.isEmpty ? NavigatePanel('/album') : Container(
-					height: 70,
-					decoration: BoxDecoration(
-						border: Border(top: BorderSide(color: Colors.cyan)),
-						color: const Color(0xFF13283B),
-					),
-					child: Row(
-						mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-						children: [
-							IconTextButton(Icons.select_all, "Select All", Colors.white, () {
-								for (FileInfo fi in fm.labelItems) {
-									if (!_isSelected(fi)) {
-										_selectedFiles.add(fi);
-									}
-								}
-								_pageSetState();
-							}),
-							IconTextButton(Icons.deselect, "Cancel", Colors.white, () {
-								_selectedFiles.clear();
-								_pageSetState();
-							}),
-							IconTextButton(Icons.playlist_add, "Add to Queue", Colors.white,
-								() => _selectedFiles.forEach(AudioPlayerHandler.instance.addMusic)),
-							IconTextButton(Icons.bookmark_add, "Add to Label", Colors.white, () async {
-								List<String> lbs = [];
-								bool? ok = await showDialog(
-									context: context,
-									builder: (ctx) => AlertDialog(
-										shape: RoundedRectangleBorder(
-											borderRadius: BorderRadius.circular(0.0),
-										),
-										title: Text('Select labels to add:', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
-										content: SizedBox(
-											width: 300,
-											height: 500,
-											child: CheckboxList(fm.labels.map((l) => l.name).toList(), lbs)
-										),
-										actions: [
-											TextButton( child: Text('CANCEL'), onPressed: () => Navigator.pop(ctx, false)),
-											TextButton( child: Text('CONFIRM'), onPressed: () => Navigator.pop(ctx, true))
-										]
-									)
-								);
-								if (ok ?? false) {
-									for (final label in lbs) {
-										await fm.assignLabelToFiles(label, _selectedFiles);
-									}
-								}
-							}),
-						]
-					)
-				)
+				_selectedFiles.isEmpty ? NavigatePanel('/album') : _BottomSelectPanel()
 			]
+		);
+  }
+}
+
+class _BottomSelectPanel extends StatelessWidget {
+	@override
+  Widget build(BuildContext context) {
+		final fm = FileManager.instance;
+		return Container(
+			height: 70,
+			decoration: BoxDecoration(
+				border: Border(top: BorderSide(color: Colors.cyan)),
+				color: const Color(0xFF13283B),
+			),
+			child: Row(
+				mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+				children: [
+					IconTextButton(Icons.select_all, "Select All", Colors.white, () {
+						for (FileInfo fi in fm.fileList) {
+							if (!_isSelected(fi)) {
+								_selectedFiles.add(fi);
+							}
+						}
+						_pageSetState();
+					}),
+					IconTextButton(Icons.deselect, "Cancel", Colors.white, () {
+						_selectedFiles.clear();
+						_pageSetState();
+					}),
+					IconTextButton(Icons.playlist_add, "Add to Queue", Colors.white,
+						() => _selectedFiles.forEach(AudioPlayerHandler.instance.addMusic)),
+					IconTextButton(Icons.bookmark_add, "Edit Label", Colors.white, () async {
+						final lcf = await fm.labelsContainFiles(_selectedFiles);
+						if (!context.mounted) return;
+						bool? ok = await showDialog(
+							context: context,
+							builder: (ctx) => AlertDialog(
+								shape: RoundedRectangleBorder(
+									borderRadius: BorderRadius.circular(0.0),
+								),
+								title: Text('Select labels to add:', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
+								content: SizedBox(
+									width: 300,
+									height: 500,
+									child: CheckboxList(lcf)
+								),
+								actions: [
+									TextButton( child: Text('CANCEL'), onPressed: () => Navigator.pop(ctx, false)),
+									TextButton( child: Text('CONFIRM'), onPressed: () => Navigator.pop(ctx, true))
+								]
+							)
+						);
+						if (ok ?? false) {
+							for (final me in lcf.entries) {
+								if (me.value != null) {
+									me.value! ? await fm.assignLabelToFiles(me.key, _selectedFiles)
+										: await fm.removeLabelFromFiles(me.key, _selectedFiles);
+								}
+							}
+							// for (final label in lbs) {
+							// 	await fm.assignLabelToFiles(label, _selectedFiles);
+							// }
+						}
+					}),
+				]
+			)
 		);
   }
 }
 
 Future<void> _userCreateOrEditLabel(BuildContext ctx, LabelInfo? label) async {
 	final fm = FileManager.instance;
-	String input = '';
-	Color color = Colors.red;
+	String input = label?.name ?? '';
+	Color color = label != null ? Color(label.color) : Colors.red;
 	bool? ok = await showDialog(
 		context: ctx,
 		builder: (ctx) => AlertDialog(

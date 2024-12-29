@@ -11,3 +11,5 @@ Install `flutter cmdline-tools` on your pc then type:
 flutter build apk --release --target-platform android-arm64
 flutter install
 ```
+
+Make sure your phone is connected to your PC via `adb`.
