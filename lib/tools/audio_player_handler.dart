@@ -8,17 +8,13 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 	// Singleton instance.
 	static late AudioPlayerHandler instance;
 
-	final player		= AudioPlayer(); 
-	final playlist	= ConcatenatingAudioSource(children: []);
+	List<MediaItem> playlist = [];
+	int crntPos = -1;
+
+	final player = AudioPlayer(); 
 
 	AudioPlayerHandler() {
-		player.setAudioSource(playlist);
-		_listenForDurationChanges();
-		_listenForPlaylistEnd();
-		player.playbackEventStream.map(_transformEvent).pipe(playbackState);
-	}
-
-	void _listenForDurationChanges() {
+		// listen duration changes.
     player.durationStream.listen((duration) {
       int index = player.currentIndex ?? -1;
       final nq = queue.value;
@@ -31,14 +27,15 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       queue.add(nq);
       mediaItem.add(m);
     });
-  }
 
-	void _listenForPlaylistEnd() {
+		// skip to next song if available.
 		player.playbackEventStream.listen((e) {
-			if (e.processingState == ProcessingState.completed && isAtLastMusic()) {
-				pause();
+			if (e.processingState == ProcessingState.completed && crntPos < playlist.length - 1) {
+				skipToNext();
 			}
 		});
+
+		player.playbackEventStream.map(_transformEvent).pipe(playbackState);
 	}
 
 	PlaybackState _transformEvent(PlaybackEvent event) {
@@ -70,13 +67,17 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   }
 
   Future<void> addMusic(FileInfo fi) async {
-    final UriAudioSource source = AudioSource.file(fi.path);
-    playlist.add(source);
-    queue.value.add(MediaItem(id: fi.path, title: fi.name));
+		MediaItem mi = MediaItem(id: fi.path, title: fi.name);
+		playlist.add(mi);
+		if (player.audioSource == null) {
+			player.setFilePath(fi.path);
+		}
+    queue.value.add(mi);
     queue.add(queue.value);
   }
 
 	Future<void> removeMusicAt(int index) async {
+		
 		await playlist.removeAt(index);
 		final nq = queue.value..removeAt(index);
 		queue.add(nq);
@@ -117,15 +118,6 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   @override Future<void> stop() => player.stop();
   @override Future<void> seek(Duration position) => player.seek(position);
   @override Future<void> skipToQueueItem(int index) => player.seek(Duration.zero, index: index);
-
-	int crntIndex() => player.currentIndex ?? -1;
-
-	bool isAtFirstMusic() =>
-		player.currentIndex != null && player.currentIndex! <= 0;
-
-	bool isAtLastMusic() =>
-		player.currentIndex != null && player.currentIndex! >= playlist.length - 1;
-	
 }
 
 Stream<MediaState> get mediaStateStream =>
