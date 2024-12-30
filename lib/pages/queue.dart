@@ -74,7 +74,7 @@ class _MediaPlayerWidget extends StatelessWidget {
       stream: mediaStateStream,
       builder: (_, __) {
 				Duration dur = ah.player.duration ?? Duration.zero;	
-				Duration pos = ah.playlist.length > 0 ? ah.player.position : Duration.zero;
+				Duration pos = ah.playlist.isNotEmpty ? ah.player.position : Duration.zero;
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -191,7 +191,7 @@ class _QueueListWidget extends StatelessWidget {
 			builder: (_, s1) {
 				final queue = s1.data ?? [];
 				return StreamBuilder(
-					stream: ah.player.currentIndexStream,
+					stream: ah.mediaItem,
 					builder: (_, s2) {
 						return Scrollbar(
 							child: ReorderableListView(
@@ -237,9 +237,10 @@ class _QueueMusicCard extends StatelessWidget {
 	@override
   Widget build(BuildContext context) {
 		final ah = AudioPlayerHandler.instance;
+		print('${ah.crntPos} == $index');
     return GestureDetector(
 			onTap: () {
-				if (ah.crntIndex() != index) {
+				if (ah.crntPos != index) {
 					ah.skipToQueueItem(index);
 				}
 			},
@@ -254,7 +255,7 @@ class _QueueMusicCard extends StatelessWidget {
 					title: Text(
 						name,
 						style: TextStyle(
-							color: ah.crntIndex() == index ? Colors.cyan : Colors.white
+							color: ah.crntPos == index ? Colors.cyan : Colors.white
 						)
 					),
 					trailing: IconButton(
