@@ -126,9 +126,15 @@ class FileManager {
 		labels.removeWhere((l) => l.name == name);
 	}
 
-	Future<void> assignLabelToFiles(String label, List<FileInfo> paths) async => _db.insertMatches(label, paths);
+	Future<void> assignLabelToFiles(String label, List<FileInfo> paths) async {
+		await _db.insertMatches(label, paths);
+		if (crntLabel != null && label == crntLabel!.name) labelItems = await _db.findMatches(label);
+	}
 
-	Future<void> removeLabelFromFiles(String label, List<FileInfo> files) async => _db.deleteMatches(label, files);
+	Future<void> removeLabelFromFiles(String label, List<FileInfo> files) async {
+		await _db.deleteMatches(label, files);
+		if (crntLabel != null && label == crntLabel!.name) labelItems = await _db.findMatches(label);
+	}
 
 	Future<Map<String, bool?>> labelsContainFiles(List<FileInfo> files) async {
 		Map<String, bool?> ret = {};

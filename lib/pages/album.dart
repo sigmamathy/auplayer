@@ -23,6 +23,8 @@ class AlbumPage extends StatefulWidget {
 
 class AlbumPageState extends State<AlbumPage> {
 
+	late FocusNode _searchBarFocus;
+
 	static bool _firstExecution = true;
 	void _executeOnStartOnly() {
 		if (!_firstExecution)	return;
@@ -35,6 +37,13 @@ class AlbumPageState extends State<AlbumPage> {
     super.initState();
 		_pageSetState = () => setState(() {});
 		_executeOnStartOnly();
+		_searchBarFocus = FocusNode();
+  }
+
+	@override
+  void dispose() {
+    _searchBarFocus.dispose();
+    super.dispose();
   }
 
 	AppBar _appBar(BuildContext ctx) {
@@ -47,15 +56,17 @@ class AlbumPageState extends State<AlbumPage> {
 							child: SizedBox(
 								height: 40.0,
 								child: TextFormField(
+									focusNode: _searchBarFocus,
 									style: TextStyle(color: Colors.white),
+									initialValue: _searchValue,
 									decoration: InputDecoration(
-										hintText: 'Type Something to Search',
+										hintText: 'Search Here',
 										hintStyle: TextStyle(fontStyle: FontStyle.italic),
 										suffixIcon: IconButton(
 											icon: Icon(Icons.clear, color: Colors.white),
-											onPressed: () => setState(() { _searchValue = ""; _searchMode = false; }),                 
+											onPressed: () => setState(() { _searchMode = false; }),
 										)
-									), 
+									),
 									onChanged: (String? value) => setState(() => _searchValue = value!),
 								)
 							)
@@ -73,7 +84,10 @@ class AlbumPageState extends State<AlbumPage> {
 						Expanded(child: SizedBox()),
 						IconButton(
 							icon: Icon(Icons.search, color: Colors.white, size: 30.0),
-							onPressed: () => setState(() => _searchMode = true),
+							onPressed: () {
+								setState(() => _searchMode = true);
+								_searchBarFocus.requestFocus();
+							},
 						)
 					],
 					if (_selectedFiles.isEmpty) IconButton(
@@ -104,8 +118,12 @@ class AlbumPageState extends State<AlbumPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-			canPop: _selectedFiles.isEmpty,
+			canPop: !_searchMode && _selectedFiles.isEmpty,
 			onPopInvokedWithResult: (bool didPop, Object? _) {
+				if (_searchMode) {
+					setState(() => _searchMode = false);
+					return;
+				}
 				_selectedFiles.clear();
 				_pageSetState();
 			},
@@ -148,7 +166,7 @@ class _FolderViewWidgetState extends State<_FolderViewWidget> {
 				),
 				Expanded(
 					child: ListView (
-						children: [..._filterBySearch(fm.fileList).map((fi) =>
+						children: [..._filterFilesBySearch(fm.fileList).map((fi) =>
 							fi.isDir ? _DirectoryCard(fi, _setState) : _AudioFileCard(fi)), SizedBox(height: 10.0)]
 					)
 				),
@@ -175,8 +193,8 @@ class _LabelViewWidgetState extends State<_LabelViewWidget> {
 						children: [
 							if (fm.crntLabel != null) _LabelCard(null),
 							...(fm.crntLabel == null ?
-								fm.labels.map((l) => _LabelCard(l))
-								: fm.labelItems.map((f) => _AudioFileCard(f))),
+								_filterLabelsBySearch(fm.labels).map((l) => _LabelCard(l))
+								: _filterFilesBySearch(fm.labelItems).map((f) => _AudioFileCard(f))),
 							SizedBox(height: 10.0)
 						]
 					)
@@ -201,7 +219,7 @@ class _BottomSelectPanel extends StatelessWidget {
 				mainAxisAlignment: MainAxisAlignment.spaceEvenly,
 				children: [
 					IconTextButton(Icons.select_all, "Select All", Colors.white, () {
-						for (FileInfo fi in fm.fileList) {
+						for (FileInfo fi in _filterFilesBySearch(_folderViewMode ? fm.fileList : fm.labelItems)) {
 							if (!_isSelected(fi)) {
 								_selectedFiles.add(fi);
 							}
@@ -223,7 +241,7 @@ class _BottomSelectPanel extends StatelessWidget {
 								shape: RoundedRectangleBorder(
 									borderRadius: BorderRadius.circular(0.0),
 								),
-								title: Text('Select labels to add:', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
+								title: Text('Edit label selection:', style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold)),
 								content: SizedBox(
 									width: 300,
 									height: 500,
@@ -242,9 +260,7 @@ class _BottomSelectPanel extends StatelessWidget {
 										: await fm.removeLabelFromFiles(me.key, _selectedFiles);
 								}
 							}
-							// for (final label in lbs) {
-							// 	await fm.assignLabelToFiles(label, _selectedFiles);
-							// }
+							_pageSetState();
 						}
 					}),
 				]
@@ -253,8 +269,12 @@ class _BottomSelectPanel extends StatelessWidget {
   }
 }
 
-List<FileInfo> _filterBySearch(List<FileInfo> fis) {
-	return fis.where((fi) => fi.name.contains(_searchValue)).toList();
+List<FileInfo> _filterFilesBySearch(List<FileInfo> fis) {
+	return _searchMode ? fis.where((fi) => fi.name.contains(_searchValue)).toList() : fis;
+}
+
+List<LabelInfo> _filterLabelsBySearch(List<LabelInfo> lis) {
+	return _searchMode ? lis.where((li) => li.name.contains(_searchValue)).toList() : lis;
 }
 
 Future<void> _userCreateOrEditLabel(BuildContext ctx, LabelInfo? label) async {
