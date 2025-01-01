@@ -107,8 +107,8 @@ class _MediaPlayerWidget extends StatelessWidget {
 
         bool isPlaying = s.data ?? false;
 				bool hasMedia = ah.mediaItem.value != null;
-				bool canSkipPrev = hasMedia && (ah.player.currentIndex??-1) > 0;
-				bool canSkipNext = hasMedia && (ah.player.currentIndex??-1) < ah.playlist.length-1;
+				bool canSkipPrev = hasMedia && (ah.crntPos) > 0;
+				bool canSkipNext = hasMedia && (ah.crntPos) < ah.playlist.length-1;
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -237,7 +237,6 @@ class _QueueMusicCard extends StatelessWidget {
 	@override
   Widget build(BuildContext context) {
 		final ah = AudioPlayerHandler.instance;
-		print('${ah.crntPos} == $index');
     return GestureDetector(
 			onTap: () {
 				if (ah.crntPos != index) {

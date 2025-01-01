@@ -53,7 +53,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
       updatePosition: player.position,
       bufferedPosition: player.bufferedPosition,
       speed: player.speed,
-      queueIndex: event.currentIndex,
+      queueIndex: crntPos,
     );
   }
 
@@ -118,7 +118,8 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		crntPos = index;
 		if (index >= 0 && index <= lastIndex) {
 			await player.setFilePath(playlist[index].id);
-			mediaItem.add(playlist[index]);
+			// ----------------------------------------------------- THIS DOES NOT WORK GOD DAMMIT ------------------------------ //
+			mediaItem.add(MediaItem(id: playlist[index].id, title: playlist[index].title));
 			if (shouldPlay) play();
 		} else {
 			mediaItem.add(null);
