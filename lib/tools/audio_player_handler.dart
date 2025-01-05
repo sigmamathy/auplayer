@@ -10,6 +10,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
 	List<MediaItem> playlist = [];
 	int crntPos = -1;
+	bool hasMediaItem = false;
 
 	final player = AudioPlayer(); 
 
@@ -109,7 +110,12 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   // The most common callbacks:
   @override Future<void> play() async => await player.play();
   @override Future<void> pause() async => await player.pause();
-  @override Future<void> stop() async => await player.stop();
+
+  @override Future<void> stop() async {
+		hasMediaItem = false;
+		await player.stop();
+	}
+
   @override Future<void> seek(Duration position) async => await player.seek(position);
 
   @override Future<void> skipToQueueItem(int index) async {
@@ -117,11 +123,12 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		await stop();
 		crntPos = index;
 		if (index >= 0 && index <= lastIndex) {
+			hasMediaItem = true;
+			mediaItem.add(playlist[index]);
 			await player.setFilePath(playlist[index].id);
-			// ----------------------------------------------------- THIS DOES NOT WORK GOD DAMMIT ------------------------------ //
-			mediaItem.add(MediaItem(id: playlist[index].id, title: playlist[index].title));
 			if (shouldPlay) play();
 		} else {
+			hasMediaItem = false;
 			mediaItem.add(null);
 		}
 	}
