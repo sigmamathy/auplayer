@@ -141,6 +141,7 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		bool shouldPlay = player.playing;
 		await stop();
 		crntPos = index;
+		// await player.setFilePath(playlist[index].id);
 		mediaItem.add(playlist[index]);
 		await player.setFilePath(playlist[index].id);
 		if (shouldPlay) play();
@@ -151,10 +152,11 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 }
 
 Stream<MediaState> get mediaStateStream =>
-  Rx.combineLatest2<MediaItem?, Duration, MediaState>(
+  Rx.combineLatest3<MediaItem?, Duration, List<MediaItem>, MediaState>(
     AudioPlayerHandler.instance.mediaItem,
     AudioService.position,
-    (mediaItem, position) => MediaState(mediaItem, position)
+		AudioPlayerHandler.instance.queue,
+    (mediaItem, position, _) => MediaState(mediaItem, position)
   );
 
 class MediaState {

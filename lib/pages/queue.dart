@@ -72,10 +72,9 @@ class _MediaPlayerWidget extends StatelessWidget {
 		final ah = AudioPlayerHandler.instance;
     return StreamBuilder<MediaState>(
       stream: mediaStateStream,
-      builder: (_, __) => StreamBuilder<List<MediaItem>>(
-				stream: ah.queue,
-				builder: (_, __) {
+      builder: (_, test) {
 					print("===========================================");
+					print(test.data?.mediaItem);
 					Duration dur = ah.playlist.isNotEmpty ? (ah.player.duration ?? Duration.zero) : Duration.zero;	
 					Duration pos = ah.playlist.isNotEmpty ? ah.player.position : Duration.zero;
 					if (pos > dur) pos = dur;
@@ -100,7 +99,6 @@ class _MediaPlayerWidget extends StatelessWidget {
 						],
 					);
 				}
-			)
     );
   }
 	
@@ -248,6 +246,7 @@ class _QueueMusicCard extends StatelessWidget {
     return GestureDetector(
 			onTap: () {
 				if (ah.crntPos != index) {
+					print('+++++++++++++++++++++++++++++++++++++');
 					ah.skipToQueueItem(index);
 				}
 			},
