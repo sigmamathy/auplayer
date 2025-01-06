@@ -10,7 +10,6 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
 	List<MediaItem> playlist = [];
 	int crntPos = -1;
-	bool hasMediaItem = false;
 
 	final player = AudioPlayer(); 
 
@@ -21,8 +20,12 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     });
 
 		// skip to next song if available.
-		player.playbackEventStream.listen((e) {
+		player.playbackEventStream.listen((e) async {
 			if (e.processingState == ProcessingState.completed) {
+				if (allSongsCompleted) {
+					await stop();
+					return;
+				}
 				skipToNext();
 			}
 		});
@@ -60,38 +63,55 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
 	int get lastIndex => playlist.length - 1;
 
+	bool get allSongsCompleted => crntPos == -1 ||
+		(crntPos == lastIndex && player.position >= player.duration!);
+
   Future<void> addMusic(FileInfo fi) async {
 		MediaItem mi = MediaItem(id: fi.path, title: fi.name);
-		playlist.add(mi);
-		if (player.audioSource == null) {
+		if (allSongsCompleted) {
 			player.setFilePath(fi.path);
-			crntPos = 0;
+			crntPos++;
 			mediaItem.add(mi);
 		}
-    queue.value.add(mi);
-    queue.add(queue.value);
+		playlist.add(mi);
+    queue.add(playlist);
   }
 
 	Future<void> removeMusicAt(int index) async {
 		playlist.removeAt(index);
-		final nq = queue.value..removeAt(index);
-		queue.add(nq);
-		if (index == crntPos) {
+		queue.add(playlist);
+		if (playlist.isEmpty) {
+			await stop();
+			crntPos = -1;
+			mediaItem.add(null);
+		} else if (index == crntPos) {
 			int i = index > lastIndex ? lastIndex : index;
 			skipToQueueItem(i);
+		} else if (index < crntPos) {
+			crntPos--;
 		}
 	}
 
 	Future<void> removeAll() async {
 		await stop();
 		playlist.clear();
-		final nq = queue.value..clear();
-		queue.add(nq);
+		crntPos = -1;
+		queue.add(playlist);
 		mediaItem.add(null);
 	}
 
 	Future<void> moveMusicAt(int from, int to) async {
-		// if (to > from) to--;
+		int i = crntPos;
+		if (to > from) to--;
+		MediaItem item = playlist[from];
+		playlist..remove(item)..insert(to, item);
+		queue.add(playlist);
+		if (i == from) {
+			crntPos = to;
+		} else if (i == to) {
+			crntPos = from;
+		}
+		
 		// int i = crntIndex();
 		// Duration pos = player.position;
 		// await playlist.move(from, to);
@@ -112,7 +132,6 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   @override Future<void> pause() async => await player.pause();
 
   @override Future<void> stop() async {
-		hasMediaItem = false;
 		await player.stop();
 	}
 
@@ -122,19 +141,13 @@ class AudioPlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 		bool shouldPlay = player.playing;
 		await stop();
 		crntPos = index;
-		if (index >= 0 && index <= lastIndex) {
-			hasMediaItem = true;
-			mediaItem.add(playlist[index]);
-			await player.setFilePath(playlist[index].id);
-			if (shouldPlay) play();
-		} else {
-			hasMediaItem = false;
-			mediaItem.add(null);
-		}
+		mediaItem.add(playlist[index]);
+		await player.setFilePath(playlist[index].id);
+		if (shouldPlay) play();
 	}
 
-	@override Future<void> skipToPrevious() => skipToQueueItem(crntPos - 1);
-	@override Future<void> skipToNext() => skipToQueueItem(crntPos + 1);
+	@override Future<void> skipToPrevious() async => await skipToQueueItem(crntPos - 1);
+	@override Future<void> skipToNext() async => await skipToQueueItem(crntPos + 1);
 }
 
 Stream<MediaState> get mediaStateStream =>

@@ -72,30 +72,35 @@ class _MediaPlayerWidget extends StatelessWidget {
 		final ah = AudioPlayerHandler.instance;
     return StreamBuilder<MediaState>(
       stream: mediaStateStream,
-      builder: (_, __) {
-				Duration dur = ah.player.duration ?? Duration.zero;	
-				Duration pos = ah.playlist.isNotEmpty ? ah.player.position : Duration.zero;
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-						Text(_durationToTimeFormat(pos), style: TextStyle(color: Colors.white)),
-            Expanded(
-							child: Slider(
-								min: 0,
-								max: dur.inSeconds.toDouble(),
-								value: pos.inSeconds.toDouble(), 
-								thumbColor: Colors.deepPurple[400],
-								activeColor: Colors.deepPurple[400],
-								inactiveColor: Colors.grey,
-								onChanged: (newValue) {
-									ah.seek(Duration(seconds: newValue.toInt()));
-								}
-							)
-						),
-						Text(_durationToTimeFormat(dur), style: TextStyle(color: Colors.white)),
-          ],
-        );
-      },
+      builder: (_, __) => StreamBuilder<List<MediaItem>>(
+				stream: ah.queue,
+				builder: (_, __) {
+					print("===========================================");
+					Duration dur = ah.playlist.isNotEmpty ? (ah.player.duration ?? Duration.zero) : Duration.zero;	
+					Duration pos = ah.playlist.isNotEmpty ? ah.player.position : Duration.zero;
+					if (pos > dur) pos = dur;
+					return Row(
+						mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+						children: [
+							Text(_durationToTimeFormat(pos), style: TextStyle(color: Colors.white)),
+							Expanded(
+								child: Slider(
+									min: 0,
+									max: dur.inSeconds.toDouble(),
+									value: pos.inSeconds.toDouble(), 
+									thumbColor: Colors.deepPurple[400],
+									activeColor: Colors.deepPurple[400],
+									inactiveColor: Colors.grey,
+									onChanged: (newValue) {
+										ah.seek(Duration(seconds: newValue.toInt()));
+									}
+								)
+							),
+							Text(_durationToTimeFormat(dur), style: TextStyle(color: Colors.white)),
+						],
+					);
+				}
+			)
     );
   }
 	
@@ -103,41 +108,44 @@ class _MediaPlayerWidget extends StatelessWidget {
 		final ah = AudioPlayerHandler.instance;
     return StreamBuilder<bool>(
       stream: ah.playbackState.map((state) => state.playing), 
-      builder: (_, s) {
+      builder: (_, s) => StreamBuilder<List<MediaItem>>(
+				stream: ah.queue,
+				builder: (_, __) {
 
-        bool isPlaying = s.data ?? false;
-				bool hasMedia = ah.mediaItem.value != null;
-				bool canSkipPrev = hasMedia && (ah.crntPos) > 0;
-				bool canSkipNext = hasMedia && (ah.crntPos) < ah.playlist.length-1;
+					bool isPlaying = s.data ?? false;
+					bool hasMedia = ah.mediaItem.value != null;
+					bool canSkipPrev = hasMedia && (ah.crntPos) > 0;
+					bool canSkipNext = hasMedia && (ah.crntPos) < ah.playlist.length-1;
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-						IconButton(
-							onPressed: canSkipPrev ? ah.skipToPrevious : (){},
-							icon: Icon(
-								Icons.skip_previous,
-								color: canSkipPrev ? Colors.white : Colors.grey
-							)
-						),
-            IconButton(
-              onPressed: hasMedia ? (isPlaying ? ah.pause : ah.play) : (){}, 
-              icon: Icon(
-								isPlaying ? Icons.pause : Icons.play_arrow,
-								color: hasMedia ? Colors.white : Colors.grey
+					return Row(
+						mainAxisAlignment: MainAxisAlignment.center,
+						children: [
+							IconButton(
+								onPressed: canSkipPrev ? ah.skipToPrevious : (){},
+								icon: Icon(
+									Icons.skip_previous,
+									color: canSkipPrev ? Colors.white : Colors.grey
+								)
 							),
-							iconSize: 36.0,
-            ),
-						IconButton(
-							onPressed: canSkipNext ? ah.skipToNext : (){},
-							icon: Icon(
-								Icons.skip_next,
-								color: canSkipNext ? Colors.white : Colors.grey
-							)
-						),
-          ],
-        );
-      }
+							IconButton(
+								onPressed: hasMedia ? (isPlaying ? ah.pause : ah.play) : (){}, 
+								icon: Icon(
+									isPlaying ? Icons.pause : Icons.play_arrow,
+									color: hasMedia ? Colors.white : Colors.grey
+								),
+								iconSize: 36.0,
+							),
+							IconButton(
+								onPressed: canSkipNext ? ah.skipToNext : (){},
+								icon: Icon(
+									Icons.skip_next,
+									color: canSkipNext ? Colors.white : Colors.grey
+								)
+							),
+						],
+					);
+				}
+			)
     );
 	}
 
